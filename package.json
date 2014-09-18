@@ -4,12 +4,21 @@
   "description": "Adding and reading png iTXt data with streams",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test.js"
   },
   "author": "Finn Pauls",
   "license": "MIT",
   "dependencies": {
     "duplexer": "^0.1.1",
     "streampng": "^0.1.7"
-  }
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/finnp/png-itxt.git"
+  },
+  "bugs": {
+    "url": "https://github.com/finnp/png-itxt/issues"
+  },
+  "homepage": "https://github.com/finnp/png-itxt"
 }
