@@ -9,8 +9,8 @@
   "author": "Finn Pauls",
   "license": "MIT",
   "dependencies": {
-    "duplexer": "^0.1.1",
-    "streampng": "^0.1.7"
+    "chunky-rice": "0.0.3",
+    "duplexer": "^0.1.1"
   },
   "devDependencies": {},
   "repository": {
