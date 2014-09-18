@@ -1,4 +1,4 @@
-# png-itxt
+# png-itxt [![Build Status](https://travis-ci.org/finnp/png-itxt.svg?branch=master)](https://travis-ci.org/finnp/png-itxt)
 
 Install with
 ```
