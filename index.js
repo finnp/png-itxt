@@ -36,7 +36,7 @@ function get(keyword, callback) {
       if(chunk.data.slice(0, pos).toString() === keyword) {
         callback(chunk.data.slice(pos + 5).toString('utf8'))
       }
-    }  
+    }
     cb()
   })).pipe(encoder)
 
