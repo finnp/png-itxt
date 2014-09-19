@@ -9,8 +9,8 @@
   "author": "Finn Pauls",
   "license": "MIT",
   "dependencies": {
-    "duplexer": "^0.1.1",
     "png-chunk-stream": "^1.0.1",
+    "pumpify": "^1.3.2",
     "through2": "^0.6.1"
   },
   "devDependencies": {},

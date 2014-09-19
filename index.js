@@ -1,46 +1,43 @@
-var duplex = require('duplexer')
+var pumpify = require('pumpify')
 var encode = require('png-chunk-stream').encode
 var decode = require('png-chunk-stream').decode
 var through = require('through2')
 
 function set(key, data) {
 
-  var decoder = decode()
-  var encoder = encode()
-
   // TODO: Check for existing iTXt
 
-  decoder.pipe(through.obj(function (chunk, enc, cb) {
-    if(chunk.type === 'IEND') {
-        this.push({
-          'type': 'iTXt',
-          'data': createChunk(key, data)
-        })
-    }
-    this.push(chunk)
-    cb()
-  })).pipe(encoder)
-
-  return duplex(decoder, encoder)
-  
+  return pumpify(
+    decode(), 
+    through.obj(function (chunk, enc, cb) {
+      if(chunk.type === 'IEND') {
+          this.push({
+            'type': 'iTXt',
+            'data': createChunk(key, data)
+          })
+      }
+      this.push(chunk)
+      cb()
+    }),
+    encode()
+  )
 }
 
 function get(keyword, callback) {
-  var decoder = decode()
-  var encoder = encode()
-
-  decoder.pipe(through.obj(function (chunk, enc, cb) {
-    this.push(chunk)
-    if(chunk.type === 'iTXt') {
-      var pos = getKeyEnd(chunk)
-      if(chunk.data.slice(0, pos).toString() === keyword) {
-        callback(chunk.data.slice(pos + 5).toString('utf8'))
+  return pumpify(
+    decode(),
+    through.obj(function (chunk, enc, cb) {
+      this.push(chunk)
+      if(chunk.type === 'iTXt') {
+        var pos = getKeyEnd(chunk)
+        if(chunk.data.slice(0, pos).toString() === keyword) {
+          callback(chunk.data.slice(pos + 5).toString('utf8'))
+        }
       }
-    }
-    cb()
-  })).pipe(encoder)
-
-  return duplex(decoder, encoder)
+      cb()
+    }),
+    encode()
+  )
 }
 
 function getKeyEnd(chunk) {  
