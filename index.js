@@ -34,8 +34,12 @@ function get(keyword, callback) {
       if(chunk.type === 'iTXt') {
         var pos = getKeyEnd(chunk)
         if(chunk.data.slice(0, pos).toString() === keyword) {
+          this.found = true
           callback(chunk.data.slice(pos + 5).toString('utf8'))
         }
+      }
+      if(!this.found && chunk.type === 'IEND') {
+        callback(null)
       }
       cb()
     }),

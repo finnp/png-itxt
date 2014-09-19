@@ -18,6 +18,9 @@ fs.createReadStream('input.png')
 ```
 
 ## get - Reading iTXt data
+
+If the keyword is not found the callback will be `null`.
+
 ```js
 fs.createReadStream('output.png')
   .pipe(pngitxt.get('pizza', function (data) {

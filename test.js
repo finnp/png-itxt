@@ -4,19 +4,15 @@ var png = require('./')
 fs.createReadStream('test.png')
   .pipe(png.set('cat', 'cute'))
   .pipe(png.get('cat', function (value) {
-    if(value === 'cute')
-      console.log('pass')
-    else 
-      throw new Error('fail')
+    if(value === 'cute') console.log('pass')
+    else throw new Error('fail')
   }))
   .pipe(png.get('pig', function (value) {
-    // should this return null or something?
-    throw new Error('does not exist')
+    if(value === null) console.log('pass')
+    else throw new Error('Should be null')
   }))
   .pipe(png.set('cat', 'fluffy'))
   .pipe(png.get('cat', function (value) {
-    if(value === 'fluffy')
-      console.log('pass')
-    else 
-      throw new Error('fail')
+    if(value === 'fluffy') console.log('pass')
+    else throw new Error('fail')
   }))
