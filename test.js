@@ -13,8 +13,9 @@ fs.createReadStream('test.png')
     // should this return null or something?
     throw new Error('does not exist')
   }))
+  .pipe(png.set('cat', 'fluffy'))
   .pipe(png.get('cat', function (value) {
-    if(value === 'cute')
+    if(value === 'fluffy')
       console.log('pass')
     else 
       throw new Error('fail')

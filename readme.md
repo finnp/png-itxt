@@ -5,7 +5,9 @@ Install with
 npm install png-itxt
 ```
 
-## Writing iTXt data
+## set - Writing iTXt data
+
+Set will modify or add the [key, value] pair.
 
 ```js
 var pngitxt = require('png-itxt')
@@ -15,7 +17,7 @@ fs.createReadStream('input.png')
   .pipe(fs.createWriteStream('output.png'))
 ```
 
-## Reading iTXt data
+## get - Reading iTXt data
 ```js
 fs.createReadStream('output.png')
   .pipe(pngitxt.get('pizza', function (data) {

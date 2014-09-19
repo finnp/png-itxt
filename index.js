@@ -5,18 +5,21 @@ var through = require('through2')
 
 function set(key, data) {
 
-  // TODO: Check for existing iTXt
-
   return pumpify(
     decode(), 
     through.obj(function (chunk, enc, cb) {
-      if(chunk.type === 'IEND') {
+      var itxt = false
+      if(chunk.type === 'iTXt') {
+        var pos = getKeyEnd(chunk)
+        itxt = chunk.data.slice(0, pos).toString() === key
+      }
+      if(itxt || chunk.type === 'IEND') {
           this.push({
             'type': 'iTXt',
             'data': createChunk(key, data)
           })
       }
-      this.push(chunk)
+      if(!itxt) this.push(chunk)
       cb()
     }),
     encode()
