@@ -18,7 +18,7 @@ fs.createReadStream('input.png')
 ## Reading iTXt data
 ```js
 fs.createReadStream('output.png')
-  .pipe(pngitxt.get('pizza', function (err, data) {
+  .pipe(pngitxt.get('pizza', function (data) {
     console.log(data) // delicious
   }))
 ```
