@@ -1,4 +1,4 @@
-var duplex = require('duplexify')
+var duplex = require('duplexer')
 var encode = require('png-chunk-stream').encode
 var decode = require('png-chunk-stream').decode
 var through = require('through2')
@@ -30,7 +30,6 @@ function get(keyword, callback) {
   var encoder = encode()
 
   decoder.pipe(through.obj(function (chunk, enc, cb) {
-    console.log(chunk)
     this.push(chunk)
     if(chunk.type === 'iTXt') {
       var pos = getKeyEnd(chunk)

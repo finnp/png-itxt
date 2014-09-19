@@ -13,7 +13,7 @@ fs.createReadStream('test.png')
 // this works
 fs.createReadStream('test.png')
   .pipe(png.set('cat', 'cute'))
-  .pipe(fs.createReadStream('out.png'))
+  .pipe(fs.createWriteStream('out.png'))
 
 // // this also works
 // fs.createReadStream('out.png')
