@@ -8,18 +8,21 @@ function set(key, data) {
   return pumpify(
     decode(), 
     through.obj(function (chunk, enc, cb) {
-      var itxt = false
+      if(this.found) {
+        this.push(chunk)
+        return cb()
+      }
       if(chunk.type === 'iTXt') {
         var pos = getKeyEnd(chunk)
-        itxt = chunk.data.slice(0, pos).toString() === key
+        this.found = chunk.data.slice(0, pos).toString() === key
       }
-      if(itxt || chunk.type === 'IEND') {
+      if(this.found || chunk.type === 'IEND') {
           this.push({
             'type': 'iTXt',
             'data': createChunk(key, data)
           })
       }
-      if(!itxt) this.push(chunk)
+      if(!this.found) this.push(chunk)
       cb()
     }),
     encode()
