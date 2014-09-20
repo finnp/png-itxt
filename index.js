@@ -1,53 +1,56 @@
-var pumpify = require('pumpify')
+var duplexer = require('duplexer')
 var encode = require('png-chunk-stream').encode
 var decode = require('png-chunk-stream').decode
 var through = require('through2')
 
 function set(key, data) {
-
-  return pumpify(
-    decode(), 
-    through.obj(function (chunk, enc, cb) {
-      if(this.found) {
-        this.push(chunk)
-        return cb()
-      }
-      if(chunk.type === 'iTXt') {
-        var pos = getKeyEnd(chunk)
-        this.found = chunk.data.slice(0, pos).toString() === key
-      }
-      if(this.found || chunk.type === 'IEND') {
-          this.push({
-            'type': 'iTXt',
-            'data': createChunk(key, data)
-          })
-      }
-      if(!this.found) this.push(chunk)
-      cb()
-    }),
-    encode()
-  )
+  
+  var encoder = encode()
+  var decoder = decode()
+  
+  decoder.pipe(through.obj(function (chunk, enc, cb) {
+    if(this.found) {
+      this.push(chunk)
+      return cb()
+    }
+    if(chunk.type === 'iTXt') {
+      var pos = getKeyEnd(chunk)
+      this.found = chunk.data.slice(0, pos).toString() === key
+    }
+    if(this.found || chunk.type === 'IEND') {
+        this.push({
+          'type': 'iTXt',
+          'data': createChunk(key, data)
+        })
+    }
+    if(!this.found) this.push(chunk)
+    cb()
+  })).pipe(encoder)
+  
+  return duplexer(decoder, encoder)
 }
 
 function get(keyword, callback) {
-  return pumpify(
-    decode(),
-    through.obj(function (chunk, enc, cb) {
-      this.push(chunk)
-      if(chunk.type === 'iTXt') {
-        var pos = getKeyEnd(chunk)
-        if(chunk.data.slice(0, pos).toString() === keyword) {
-          this.found = true
-          callback(chunk.data.slice(pos + 5).toString('utf8'))
-        }
+  
+  var encoder = encode()
+  var decoder = decode()
+  
+  decoder.pipe(through.obj(function (chunk, enc, cb) {
+    this.push(chunk)
+    if(chunk.type === 'iTXt') {
+      var pos = getKeyEnd(chunk)
+      if(chunk.data.slice(0, pos).toString() === keyword) {
+        this.found = true
+        callback(chunk.data.slice(pos + 5).toString('utf8'))
       }
-      if(!this.found && chunk.type === 'IEND') {
-        callback(null)
-      }
-      cb()
-    }),
-    encode()
-  )
+    }
+    if(!this.found && chunk.type === 'IEND') {
+      callback(null)
+    }
+    cb()
+  })).pipe(encoder)
+  
+  return duplexer(decoder, encoder)
 }
 
 function getKeyEnd(chunk) {  
