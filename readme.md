@@ -1,6 +1,7 @@
 # png-itxt 
 [![Build Status](https://travis-ci.org/finnp/png-itxt.svg?branch=master)](https://travis-ci.org/finnp/png-itxt)
 [![browser support](https://ci.testling.com/finnp/png-itxt.png)](https://ci.testling.com/finnp/png-itxt)
+[![Windows Build status](http://img.shields.io/appveyor/ci/finnp/png-itxt.svg)](https://ci.appveyor.com/project/finnp/png-itxt/branch/master)
 
 Install with
 ```
