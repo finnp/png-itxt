@@ -1,7 +1,12 @@
 var fs = require('fs')
 var png = require('./')
+var Through = require('stream').PassThrough
 
-fs.createReadStream('test.png')
+var file = new Buffer('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/TQBcNTh/AAAAAXRSTlPM0jRW/QAAAApJREFUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII', 'base64')
+
+var start = new Through()
+
+start
   .pipe(png.set('cat', 'cute'))
   .pipe(png.get('cat', function (value) {
     if(value === 'cute') console.log('pass')
@@ -16,3 +21,5 @@ fs.createReadStream('test.png')
     if(value === 'fluffy') console.log('pass')
     else throw new Error('fail')
   }))
+  
+start.write(file)
