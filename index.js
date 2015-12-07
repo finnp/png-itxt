@@ -14,7 +14,7 @@ function set(key, data) {
       return cb()
     }
     if(chunk.type === 'iTXt') {
-      var pos = getKeyEnd(chunk)
+      var pos = getFieldEnd(chunk)
       this.found = chunk.data.slice(0, pos).toString() === key
     }
     if(this.found || chunk.type === 'IEND') {
@@ -48,19 +48,35 @@ function get(keyword, callback) {
   
   decoder.pipe(through.obj(function (chunk, enc, cb) {
     this.push(chunk)
-    if(chunk.type === 'iTXt') {
-      var pos = getKeyEnd(chunk)
+    if(chunk.type === 'tEXt') {
+      var pos = getFieldEnd(chunk.data)
+      if(chunk.data.slice(0, pos).toString() === keyword) {
+        this.found = true
+
+        callback(chunk.data.slice(pos + 1).toString('utf8'));
+      }
+    }
+    else if (chunk.type == "iTXt") {
+      var pos = getFieldEnd(chunk.data)
       var currentkey = chunk.data.slice(0, pos).toString('utf8');
       
-      if(!keyword) {
-        // If there is no keyword just return the data.
+      if (!keyword || currentkey === keyword) {
         this.found = true;
-        callback(currentkey, chunk.data.slice(pos + 5).toString('utf8'))
-      }
-      else if(currentkey === keyword) {
-        // Otherwise only return if the keywords match.
-        this.found = true
-        callback(chunk.data.slice(pos + 5).toString('utf8'))
+        
+        var unprocessed = chunk.data.slice(pos+1);
+        var compressed = (unprocessed[0] == 1);
+        var compression_type = unprocessed[1];
+        
+        unprocessed = unprocessed.slice(2);
+        pos = getFieldEnd(unprocessed)
+        var language = unprocessed.slice(0, pos).toString();
+        unprocessed = unprocessed.slice(pos+1);
+        
+        ps = getFieldEnd(unprocessed);
+        var translated = unprocessed.slice(0, pos).toString();
+        unprocessed = unprocessed.slice(pos+1);
+
+        callback(currentkey, unprocessed.toString('utf8'));
       }
     }
     if(!this.found && chunk.type === 'IEND') {
@@ -72,9 +88,9 @@ function get(keyword, callback) {
   return duplexer(decoder, encoder)
 }
 
-function getKeyEnd(chunk) {  
-  for(var i = 0, len = chunk.data.length; i < len; ++i) {
-    if(!chunk.data[i])
+function getFieldEnd(data) {  
+  for(var i = 0, len = data.length; i < len; ++i) {
+    if(!data[i])
       break
   }
   return i
