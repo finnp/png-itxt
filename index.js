@@ -15,7 +15,7 @@ function set(key, data) {
       return cb()
     }
     if(chunk.type === 'iTXt') {
-      var pos = getFieldEnd(chunk)
+      var pos = getFieldEnd(chunk.data)
       this.found = chunk.data.slice(0, pos).toString() === key
     }
     if(this.found || chunk.type === 'IEND') {
