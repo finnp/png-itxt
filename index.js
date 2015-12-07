@@ -2,6 +2,7 @@ var duplexer = require('duplexer')
 var encode = require('png-chunk-stream').encode
 var decode = require('png-chunk-stream').decode
 var through = require('through2')
+var zlib = require('zlib');
 
 function set(key, data) {
   
@@ -56,6 +57,23 @@ function get(keyword, callback) {
         callback(chunk.data.slice(pos + 1).toString('utf8'));
       }
     }
+    else if (chunk.type === 'zTXt') {
+      var pos = getFieldEnd(chunk.data)
+      if(chunk.data.slice(0, pos).toString() === keyword) {
+        this.found = true
+        
+        var compression_type = chunk.data.slice(pos+1, pos+2);
+        unprocessed = chunk.data.slice(pos+3);
+        zlib.unzip(unprocessed, function(err, buffer) {
+          if(!err) {
+            callback(buffer.toString('utf8'));
+          }
+          else {
+            callback(null);
+          }
+        });
+      }
+    }
     else if (chunk.type == "iTXt") {
       var pos = getFieldEnd(chunk.data)
       var currentkey = chunk.data.slice(0, pos).toString('utf8');
@@ -76,7 +94,20 @@ function get(keyword, callback) {
         var translated = unprocessed.slice(0, pos).toString();
         unprocessed = unprocessed.slice(pos+1);
 
-        callback(currentkey, unprocessed.toString('utf8'));
+        // Not sure if this can be tidied up somewhat.
+        if (compressed) {
+          zlib.unzip(unprocessed, function(err, buffer) {
+            if (!err) {
+              callback(currentkey, buffer.toString('utf8'));
+            }
+            else {
+              callback(currentkey, null);
+            }
+          });
+        }
+        else {
+          callback(currentkey, unprocessed.toString('utf8'));
+        }
       }
     }
     if(!this.found && chunk.type === 'IEND') {
