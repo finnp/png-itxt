@@ -4,7 +4,7 @@
   "description": "Adding and reading png iTXt data with streams",
   "main": "index.js",
   "scripts": {
-    "test": "tape test.js"
+    "test": "tape test/*.test.js"
   },
   "author": "Finn Pauls",
   "license": "MIT",
@@ -17,7 +17,7 @@
     "tape": "^3.0.0"
   },
   "testling": {
-    "files": "test/*.js",
+    "files": "test/*.testling.js",
     "browsers": [
       "ie/latest",
       "chrome/latest",
