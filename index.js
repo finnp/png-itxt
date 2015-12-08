@@ -51,25 +51,27 @@ function get(keyword, callback) {
     this.push(chunk)
     if(chunk.type === 'tEXt') {
       var pos = getFieldEnd(chunk.data)
-      if(chunk.data.slice(0, pos).toString() === keyword) {
+      var currentkey = chunk.data.slice(0, pos).toString('utf8');
+      if(currentkey === keyword) {
         this.found = true
 
-        callback(chunk.data.slice(pos + 1).toString('utf8'));
+        callback(currentkey, chunk.data.slice(pos + 1).toString('utf8'));
       }
     }
     else if (chunk.type === 'zTXt') {
       var pos = getFieldEnd(chunk.data)
-      if(chunk.data.slice(0, pos).toString() === keyword) {
+      var currentkey = chunk.data.slice(0, pos).toString('utf8');
+      if(currentkey === keyword) {
         this.found = true
         
         var compression_type = chunk.data.slice(pos+1, pos+2);
         unprocessed = chunk.data.slice(pos+3);
         zlib.unzip(unprocessed, function(err, buffer) {
           if(!err) {
-            callback(buffer.toString('utf8'));
+            callback(currentkey, buffer.toString('utf8'));
           }
           else {
-            callback(null);
+            callback(null, null);
           }
         });
       }
@@ -111,7 +113,7 @@ function get(keyword, callback) {
       }
     }
     if(!this.found && chunk.type === 'IEND') {
-      callback(null)
+      callback(null, null)
     }
     cb()
   })).pipe(encoder)
