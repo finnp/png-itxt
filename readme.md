@@ -1,5 +1,7 @@
 # png-itxt 
 
+Under development. Seems stable but has not been properly tested.
+
 Install with
 ```
 npm install png-itxt
@@ -19,13 +21,15 @@ fs.createReadStream('input.png')
 
 ## get - Reading iTXt data
 
+Note: All text blocks (iTXt, tEXT, zTXT) will be found and returned by this utility. Compressed values will be decompressed before being returned.
+
 ### Finding a specific keyword
 If the keyword is not found the callback will be `null`.
 
 ```js
 fs.createReadStream('output.png')
-  .pipe(pngitxt.get('pizza', function (data) {
-    console.log(data) // delicious
+  .pipe(pngitxt.get('pizza', function (key, value) {
+    console.log(key, ":", value) // delicious
   }))
 ```
 
