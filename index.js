@@ -92,7 +92,7 @@ function get(keyword, callback) {
         var language = unprocessed.slice(0, pos).toString();
         unprocessed = unprocessed.slice(pos+1);
         
-        ps = getFieldEnd(unprocessed);
+        pos = getFieldEnd(unprocessed);
         var translated = unprocessed.slice(0, pos).toString();
         unprocessed = unprocessed.slice(pos+1);
 
