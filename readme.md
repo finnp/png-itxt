@@ -1,4 +1,5 @@
 # png-itxt 
+[![Build Status](https://travis-ci.org/briancullen/png-itxt.svg?branch=all-text-chunks)](https://travis-ci.org/briancullen/png-itxt)
 
 Under development. Seems stable but has not been properly tested.
 
