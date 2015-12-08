@@ -31,6 +31,17 @@ function set(key, data) {
 }
 
 function get(keyword, callback) {
+  // Check if a keyword was given or if it was just a callback.
+  if (!callback) {
+    if (typeof(keyword) === 'function') {
+      callback = keyword
+      keyword = null
+    }
+    else {
+      // throw exception if there is no callback.
+      throw new Error ("no callback provided");
+    }
+  }
   
   var encoder = encode()
   var decoder = decode()
@@ -39,7 +50,15 @@ function get(keyword, callback) {
     this.push(chunk)
     if(chunk.type === 'iTXt') {
       var pos = getKeyEnd(chunk)
-      if(chunk.data.slice(0, pos).toString() === keyword) {
+      var currentkey = chunk.data.slice(0, pos).toString('utf8');
+      
+      if(!keyword) {
+        // If there is no keyword just return the data.
+        this.found = true;
+        callback(currentkey, chunk.data.slice(pos + 5).toString('utf8'))
+      }
+      else if(currentkey === keyword) {
+        // Otherwise only return if the keywords match.
         this.found = true
         callback(chunk.data.slice(pos + 5).toString('utf8'))
       }

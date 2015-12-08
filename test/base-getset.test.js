@@ -1,5 +1,5 @@
 var fs = require('fs')
-var png = require('./')
+var png = require('../')
 var Through = require('stream').PassThrough
 var test = require('tape')
 
@@ -7,7 +7,7 @@ var file = new Buffer('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/T
 
 var start = new Through()
 
-test('png-itxt', function (t) {
+test('base-functions', function (t) {
   t.plan(3)
   start
     .pipe(png.set('cat', 'cute'))
@@ -24,4 +24,3 @@ test('png-itxt', function (t) {
     
   start.write(file)
 })
-
