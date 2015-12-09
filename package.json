@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "tape test/*.test.js",
-    "browserify": "browserify test/*.test.js > test/test_bundle.js"
+    "browserify": "browserify test/*.test.js > test/browser-test/test_bundle.js",
+    "testbrowser": "phantomjs test/browser-test/test_webpage.js"
   },
   "author": "Finn Pauls",
   "license": "MIT",
