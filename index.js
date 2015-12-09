@@ -4,6 +4,7 @@ var decode = require('png-chunk-stream').decode
 var through = require('through2')
 var zlib = require('zlib');
 
+const matchOperatorsRe = /[|\\{}()[\]^$+*?.]/g;
 var chunkHandlers = {
   "iTXt": function (keyword, data, callback) {
     
@@ -91,7 +92,7 @@ function get(keyword, callback) {
   // If a keyword has been specified make sure it
   // is a regular expression.
   if (keyword && (!(keyword instanceof RegExp))) {
-    keyword = new RegExp(keyword)
+    keyword = new RegExp(keyword.toString().replace(matchOperatorsRe, '\\$&'))
   }
   
   var encoder = encode()
