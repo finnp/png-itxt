@@ -88,10 +88,9 @@ function get(keyword, callback) {
     }
   }
   
-  if (keyword === null) {
-    keyword = RegExp(".+")
-  }
-  else if (!(keyword instanceof RegExp)) {
+  // If a keyword has been specified make sure it
+  // is a regular expression.
+  if (keyword && (!(keyword instanceof RegExp))) {
     keyword = new RegExp(keyword)
   }
   
