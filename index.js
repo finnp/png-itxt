@@ -4,6 +4,49 @@ var decode = require('png-chunk-stream').decode
 var through = require('through2')
 var zlib = require('zlib');
 
+var chunkHandlers = {
+  "iTXt": function (keyword, data, callback) {;
+    var compressed = (data[0] == 1);
+    var compression_type = data[1];
+
+    var unprocessed = data.slice(2);
+    var pos = getFieldEnd(unprocessed)
+    var language = unprocessed.slice(0, pos).toString('utf8');
+    unprocessed = unprocessed.slice(pos+1);
+
+    pos = getFieldEnd(unprocessed);
+    var translated = unprocessed.slice(0, pos).toString('utf8');
+    unprocessed = unprocessed.slice(pos+1);
+
+    // Not sure if this can be tidied up somewhat.
+    if (compressed) {
+      zlib.unzip(unprocessed, function(err, buffer) {
+        if (!err) {
+          callback(keyword, buffer.toString('utf8'));
+        }
+        else {
+          callback(keyword, null);
+        }
+      });
+    }
+    else {
+      callback(keyword, unprocessed.toString('utf8'));
+    }
+  },
+  "tEXt": function (keyword, data, callback) { callback(keyword, data.toString('utf8')); },
+  "zTXt": function (keyword, data, callback) { 
+    var compression_type = data[0] 
+    zlib.unzip(data.slice(1), function(err, buffer) {
+      if(!err) {
+        callback(keyword, buffer.toString('utf8'));
+      }
+      else {
+        callback(keyword, null);
+      }
+    });
+  }
+};
+
 function set(key, data) {
   
   var encoder = encode()
@@ -49,72 +92,24 @@ function get(keyword, callback) {
   
   decoder.pipe(through.obj(function (chunk, enc, cb) {
     this.push(chunk)
-    if(chunk.type === 'tEXt') {
+    
+    // Sees if there is a handler for the current type.
+    var handler = chunkHandlers[chunk.type]
+    if (handler) {
+      // If there is get the keyword and it is one we are
+      // looking for then pass it to the handler.
       var pos = getFieldEnd(chunk.data)
       var currentkey = chunk.data.slice(0, pos).toString('utf8');
-      if(currentkey === keyword) {
-        this.found = true
 
-        callback(currentkey, chunk.data.slice(pos + 1).toString('utf8'));
-      }
-    }
-    else if (chunk.type === 'zTXt') {
-      var pos = getFieldEnd(chunk.data)
-      var currentkey = chunk.data.slice(0, pos).toString('utf8');
-      if(currentkey === keyword) {
-        this.found = true
-        
-        var compression_type = chunk.data.slice(pos+1, pos+2);
-        unprocessed = chunk.data.slice(pos+3);
-        zlib.unzip(unprocessed, function(err, buffer) {
-          if(!err) {
-            callback(currentkey, buffer.toString('utf8'));
-          }
-          else {
-            callback(null, null);
-          }
-        });
-      }
-    }
-    else if (chunk.type == "iTXt") {
-      var pos = getFieldEnd(chunk.data)
-      var currentkey = chunk.data.slice(0, pos).toString('utf8');
-      
       if (!keyword || currentkey === keyword) {
         this.found = true;
-        
-        var unprocessed = chunk.data.slice(pos+1);
-        var compressed = (unprocessed[0] == 1);
-        var compression_type = unprocessed[1];
-        
-        unprocessed = unprocessed.slice(2);
-        pos = getFieldEnd(unprocessed)
-        var language = unprocessed.slice(0, pos).toString();
-        unprocessed = unprocessed.slice(pos+1);
-        
-        pos = getFieldEnd(unprocessed);
-        var translated = unprocessed.slice(0, pos).toString();
-        unprocessed = unprocessed.slice(pos+1);
-
-        // Not sure if this can be tidied up somewhat.
-        if (compressed) {
-          zlib.unzip(unprocessed, function(err, buffer) {
-            if (!err) {
-              callback(currentkey, buffer.toString('utf8'));
-            }
-            else {
-              callback(currentkey, null);
-            }
-          });
-        }
-        else {
-          callback(currentkey, unprocessed.toString('utf8'));
-        }
+        handler(currentkey, chunk.data.slice(pos + 1), callback)
       }
     }
-    if(!this.found && chunk.type === 'IEND') {
+    else if(chunk.type === 'IEND' && (!this.found)) {
       callback(null, null)
     }
+    
     cb()
   })).pipe(encoder)
   
