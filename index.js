@@ -91,7 +91,7 @@ function get(keyword, callback) {
   
   // If a keyword has been specified make sure it
   // is a regular expression.
-  if (keyword && (!(keyword instanceof RegExp))) {
+  if ((keyword !== null) && (!(keyword instanceof RegExp))) {
     keyword = new RegExp(keyword.toString().replace(matchOperatorsRe, '\\$&'))
   }
   
@@ -109,7 +109,7 @@ function get(keyword, callback) {
       var pos = getFieldEnd(chunk.data)
       var currentkey = chunk.data.slice(0, pos).toString('utf8');
 
-      if (!keyword || keyword.test(currentkey)) {
+      if (keyword === null || keyword.test(currentkey)) {
         this.found = true;
         handler(currentkey, chunk.data.slice(pos + 1), callback)
       }
