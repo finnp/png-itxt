@@ -5,7 +5,8 @@ var through = require('through2')
 var zlib = require('zlib');
 
 var chunkHandlers = {
-  "iTXt": function (keyword, data, callback) {;
+  "iTXt": function (keyword, data, callback) {
+    
     var compressed = (data[0] == 1);
     var compression_type = data[1];
 
@@ -87,6 +88,13 @@ function get(keyword, callback) {
     }
   }
   
+  if (keyword === null) {
+    keyword = RegExp(".+")
+  }
+  else if (!(keyword instanceof RegExp)) {
+    keyword = new RegExp(keyword)
+  }
+  
   var encoder = encode()
   var decoder = decode()
   
@@ -101,7 +109,7 @@ function get(keyword, callback) {
       var pos = getFieldEnd(chunk.data)
       var currentkey = chunk.data.slice(0, pos).toString('utf8');
 
-      if (!keyword || currentkey === keyword) {
+      if (!keyword || keyword.test(currentkey)) {
         this.found = true;
         handler(currentkey, chunk.data.slice(pos + 1), callback)
       }
