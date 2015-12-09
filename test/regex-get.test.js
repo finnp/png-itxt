@@ -8,7 +8,7 @@ var file = new Buffer('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/T
 var start = new Through()
 
 test('regex-get', function(t) {
-  t.plan(10)
+  t.plan(12)
   start
     .pipe(png.set('the', 'cat'))
     .pipe(png.set('thhe', 'cat'))
@@ -28,7 +28,12 @@ test('regex-get', function(t) {
       t.deepEqual(key, null, "regex works when nothing to find")
       t.deepEqual(value, null, "regex works when nothing to find")
     }))
+    .pipe(png.get('th*', function(key, value) {
+      t.deepEqual(key, null, "regex characters should not work in string.")
+      t.deepEqual(value, null, "regex characters should not work in string.")
+  }))
 
+    // TODO add tests for when string are passed in and converted to RegExp
   start.write(file)
 })
 
