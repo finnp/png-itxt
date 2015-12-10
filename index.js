@@ -2,7 +2,7 @@ var duplexer = require('duplexer')
 var encode = require('png-chunk-stream').encode
 var decode = require('png-chunk-stream').decode
 var through = require('through2')
-var zlib = require('zlib');
+var pako = require('./lib/pako.min.js');
 
 const matchOperatorsRe = /[|\\{}()[\]^$+*?.]/g;
 var chunkHandlers = {
@@ -22,14 +22,12 @@ var chunkHandlers = {
 
     // Not sure if this can be tidied up somewhat.
     if (compressed) {
-      zlib.unzip(unprocessed, function(err, buffer) {
-        if (!err) {
-          callback(keyword, buffer.toString('utf8'));
-        }
-        else {
-          callback(keyword, null);
-        }
-      });
+      try {
+        var data = new Buffer (pako.inflate(deflated))  
+        callback(keyword, data.toString('utf8'))
+      } catch (err) {
+        callback(keyword, null)
+      }
     }
     else {
       callback(keyword, unprocessed.toString('utf8'));
@@ -38,14 +36,12 @@ var chunkHandlers = {
   "tEXt": function (keyword, data, callback) { callback(keyword, data.toString('utf8')); },
   "zTXt": function (keyword, data, callback) { 
     var compression_type = data[0] 
-    zlib.unzip(data.slice(1), function(err, buffer) {
-      if(!err) {
-        callback(keyword, buffer.toString('utf8'));
-      }
-      else {
-        callback(keyword, null);
-      }
-    });
+    try {
+      var data = new Buffer (pako.inflate(deflated))  
+      callback(keyword, data.toString('utf8'))
+    } catch (err) {
+      callback(keyword, null)
+    }
   }
 };
 
