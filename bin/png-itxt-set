@@ -12,14 +12,35 @@ program
   .option('-k, --keyword <keyword>', 'keyword to set the value for')
   .option('-d, --data <chunkdata>', 'data to store with the keyword')
   .option('-f, --file <datafile>', 'text file to read the value from')
-  .option('-s, --stdin', 'read value text from standard input')
+  .option('-v, --valuein', 'read data to store from standard input')
+  .option('-s, --stdin', 'read png data from standard input')
   .option('-p, --pipe', 'redirect output to stdout for processing')
   .option('-o, --output <file>', 'file to output PNG data to')
   .parse(process.argv)
 
 // Looks at the arguements to see where the output is going to.
-if (program.args.length != 1) {
+if ((program.args.length != 1 && (!program.stdin))
+    || ((program.args.length != 0) && (program.stdin))) {
   console.error("ERROR: must specify a valid input file")
+  program.help()
+}
+
+if (program.valuein && program.stdin) {
+  console.error("ERROR: cannot read image and value from stdin at the same time")
+  process.exit(1)
+}
+
+if (program.keyword === undefined 
+    || (program.data === undefined && program.file === undefined
+       && !program.valuein)) {
+  console.error("ERROR: must provide keyword and data to store")
+  program.help()
+}
+
+if (program.data && program.file
+    || program.data && program.valuein
+    || program.file && program.valuein) {
+  console.error("ERROR: can only specify one input option at a time")
   program.help()
 }
 
@@ -35,28 +56,17 @@ else if (program.output !== undefined) {
   writeStream = fs.createWriteStream(program.output)
 }
 else {
-  var fileName = program.args[0].split(".png")[0] + "_out.png"
+  var fileName = "output.png"
+  if (!program.stdin) {
+    fileName = program.args[0].split(".png")[0] + "_out.png"
+  }
+  
   console.log("Using default option method: " + fileName)
   writeStream = fs.createWriteStream(fileName)
-  process.exit(1)  
 }
 
 // Open the stream to read the PNG data in.
-var readStream = fs.createReadStream(program.args[0])
-
-if (program.keyword === undefined 
-    || (program.data === undefined && program.file === undefined
-       && !program.stdin)) {
-  console.error("ERROR: must provide keyword and data to store")
-  program.help()
-}
-
-if (program.data && program.file
-    || program.data && program.stdin
-    || program.file && program.stdin) {
-  console.error("ERROR: can only specify one input option at a time")
-  program.help()
-}
+var readStream = program.stdin ? process.stdin : fs.createReadStream(program.args[0])
 
 function printError (err) {
   console.error("ERROR:", err.message);
