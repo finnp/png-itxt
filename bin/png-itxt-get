@@ -4,7 +4,7 @@ var fs = require('fs')
 var program = require('commander')
 var path = require ('path')
 
-//var pngitxt = require(path.join(__dirname, '..', 'index.js'))
+var pngitxt = require(path.join(__dirname, '..', 'index.js'))
 
 function regexp (val) {
   return new RegExp(val);
@@ -20,8 +20,7 @@ program
 
 
 // Check a single file name was provided.
-if (program.args.length != 1
-    || (!fs.statSync(program.args[0]).isFile())) {
+if (program.args.length != 1) {
   console.error("ERROR: you must specify a valid input file")
   program.help()
 }
@@ -41,7 +40,12 @@ if (program.regexp !== undefined) {
   searchTerm = program.regexp
 }
 
-fs.createReadStream(file)
-  .pipe(pngitxt.get(searchTerm, function (key, value) {
+
+var readStream = fs.createReadStream(program.args[0])
+readStream.on('error', function (err) {
+  console.error("ERROR:", err.message)
+  process.exit(1)
+})
+readStream.pipe(pngitxt.get(searchTerm, function (key, value) {
     console.log(key, ":", value)
 }))
