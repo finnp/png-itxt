@@ -2,9 +2,8 @@
 
 var fs = require('fs')
 var program = require('commander')
-var path = require ('path')
+var pngitxt = require('..')
 
-var pngitxt = require(path.join(__dirname, '..', 'index.js'))
 const matchOperatorsRe = /[|\\{}()[\]^$+*?.]/g;
 
 program

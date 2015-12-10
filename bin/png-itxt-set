@@ -2,8 +2,7 @@
 
 var fs = require('fs')
 var program = require('commander')
-
-var pngitxt = require(path.join(__dirname, '..', 'index.js'))
+var pngitxt = require('..')
 
 program
   .version('1.3.0')
@@ -11,19 +10,44 @@ program
   .description('Tool for setting textual information into a PNG images')
   .option('-k, --keyword <keyword>', 'keyword to set the value for')
   .option('-d, --data <chunkdata>', 'data to store with the keyword')
+  .option('-f, --file <datafile>', 'text file to read the value from')
   .parse(process.argv)
 
-if (program.args.len != 2
-    || (!fs.statSync(program.args[0]).isFile())) {
-  console.error("ERROR: must specify a valid input and output file")
+if (program.args.length != 2
+   || (program.args[0] == program.args[1])) {
+  console.error("ERROR: must specify valid and seperate input and output files")
   program.help()  
 }
 
-if (program.keyword === undefined || program.data === undefined ) {
+if (program.keyword === undefined 
+    || (program.data === undefined && program.file === undefined)) {
   console.error("ERROR: must provide keyword and data to store")
   program.help()
 }
 
-fs.createReadStream(program.args[0])
-  .pipe(pngitxt.set('pizza', 'delicous'))
-  .pipe(fs.createWriteStream(program.args[1]))
+function printError (err) {
+  console.error("ERROR:", err.message);
+  process.exit(1)
+}
+
+var readStream = fs.createReadStream (program.args[0])
+var writeStream = fs.createWriteStream (program.args[1])
+
+readStream.on("error", printError)
+writeStream.on("error", printError)
+
+if (program.data !== undefined) {
+  readStream.pipe(pngitxt.set(program.keyword,
+            program.data)).pipe(writeStream)
+}
+else {
+    fs.readFile(program.file, 'utf8', function(err, data) {
+      if (err) {
+        printError(err)
+      }
+      
+      readStream.pipe(pngitxt.set(program.keyword,
+            data)).pipe(writeStream)
+    })
+  
+}
