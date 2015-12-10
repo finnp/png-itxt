@@ -10,7 +10,13 @@
   },
   "author": "Finn Pauls",
   "license": "MIT",
+  "bin": {
+    "png-itxt": "./bin/png-itxt",
+    "png-itxt-get": "./bin/png-itxt-get",
+    "png-itxt-set": "./bin/png-itxt-set"
+  },
   "dependencies": {
+    "commander": "^2.9.0",
     "duplexer": "^0.1.1",
     "png-chunk-stream": "^1.0.1",
     "through2": "^0.6.1"

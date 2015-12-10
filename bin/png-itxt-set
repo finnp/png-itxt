@@ -1,0 +1,29 @@
+#!/usr/bin/env node
+
+var fs = require('fs')
+var program = require('commander')
+
+var pngitxt = require(path.join(__dirname, '..', 'index.js'))
+
+program
+  .version('1.3.0')
+  .usage('[options] <fileIn.png> <fileOut.png>')
+  .description('Tool for setting textual information into a PNG images')
+  .option('-k, --keyword <keyword>', 'keyword to set the value for')
+  .option('-d, --data <chunkdata>', 'data to store with the keyword')
+  .parse(process.argv)
+
+if (program.args.len != 2
+    || (!fs.statSync(program.args[0]).isFile())) {
+  console.error("ERROR: must specify a valid input and output file")
+  program.help()  
+}
+
+if (program.keyword === undefined || program.data === undefined ) {
+  console.error("ERROR: must provide keyword and data to store")
+  program.help()
+}
+
+fs.createReadStream(program.args[0])
+  .pipe(pngitxt.set('pizza', 'delicous'))
+  .pipe(fs.createWriteStream(program.args[1]))
