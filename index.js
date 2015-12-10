@@ -92,7 +92,7 @@ function get(keyword, callback) {
   // If a keyword has been specified make sure it
   // is a regular expression.
   if ((keyword !== null) && (!(keyword instanceof RegExp))) {
-    keyword = new RegExp(keyword.toString().replace(matchOperatorsRe, '\\$&'))
+    keyword = new RegExp("^" + keyword.toString().replace(matchOperatorsRe, '\\$&') + "$")
   }
   
   var encoder = encode()
