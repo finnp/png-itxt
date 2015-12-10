@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "tape test/*.test.js",
-    "browserify": "browserify test/*.test.js > test/browser-test/test_bundle.js",
-    "testbrowser": "phantomjs test/browser-test/test_webpage.js"
+    "build": "browserify -o dist/pngitxt-browser.js index.js; uglifyjs -m -o dist/pngitxt-browser.min.js dist/pngitxt-browser.js",
+    "testbrowser": "browserify test/*.test.js -o test/browser-test/test_bundle.js && phantomjs test/browser-test/test_webpage.js"
   },
   "author": "Finn Pauls",
   "license": "MIT",
@@ -16,7 +16,9 @@
     "through2": "^0.6.1"
   },
   "devDependencies": {
-    "tape": "^3.0.0"
+    "browserify": "^12.0.1",
+    "tape": "^3.0.0",
+    "uglify-js": "^2.6.1"
   },
   "testling": {
     "files": "test/*.test.js",
