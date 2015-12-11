@@ -37,7 +37,7 @@ var chunkHandlers = {
   "zTXt": function (keyword, data, callback) { 
     var compression_type = data[0] 
     try {
-      var data = new Buffer (pako.inflate(deflated))  
+      var data = new Buffer (pako.inflate(data.slice(1)))  
       callback(keyword, data.toString('utf8'))
     } catch (err) {
       callback(keyword, null)
