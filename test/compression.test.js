@@ -7,9 +7,8 @@ var zTXtData = new Buffer("iVBORw0KGgoAAAANSUhEUgAAACAAAAAgBAAAAACT4cgpAAAABGdBT
 
 var iTXtData = new Buffer("iVBORw0KGgoAAAANSUhEUgAAAAoAAAALCAYAAABGbhwYAAAABGdBTUEAALGPC/xhBQAAAARzQklUBQUFBU2lLfYAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAAscENBTGJvZ3VzIHVuaXRzAAAAAAAAAP//AAJmb28vYmFyADEuMGUwADY1LjUzNWUzV0B7HAAAAAd0SU1FB8wGBxE6CI7/JnoAAAAGYktHRADgAOAAgJXNLyAAAAAJdEVYdFRpdGxlAFBOR9wBeTUAAAAnaVRYdEF1dGhvcgAAAGZyAEF1dGV1cgBMYSBwbHVtZSBkZSBtYSB0YW50ZU/bcuEAAADKelRYdERlc2NyaXB0aW9uAAB42k2PTWrDQAyF9z7FW7aQmEIhJwjZtQ1ucNaTGTkW2NIwkhN8+4y76vbxvb+OJFGhhNuKMxVjc5JI0AE9G6vgzed3dGHFpYRIpek3quqf7ccOi7Hc4SPhwjMZvumJTucgGFQcQRKOX6erajq0zS9vyeeffr/FJa28qCNxoTj5Clty1uJgcSpTLUvQxfPiu8ZHNgw8EcZguBEJosqDilfItRb9d/Ec7oQHB4Qmq/k+F41kf1vrv9y+AG4IVyNpKlL5AAAAb2lUWHRXYXJuaW5nAAEAZGUAV0FSTklORwB4nAXBwQ2DMAwF0Hun+AOUDIEKiDMTuPIHWSKOFCdB6vR9bwlYYLB+S6O/0TPUGMRHGg3mUAls+zrNdutZapb26vnXH3Hl7Qk4jAhzxcUh1RueUpWe/rKYICRVGEZ3AAAAG0lEQVQoU2P8DwQMRAAmKE0QjCrEC6itkIEBABCLBBKfcg7nAAAAAElFTkSuQmCC", "base64")
 
-var start = new Through()
-
 test('compression-zTXt', function(t) {
+  var start = new Through()
   t.plan(6)
   start
     .pipe(png.get("Copyright", function (key, value) {
@@ -23,14 +22,14 @@ test('compression-zTXt', function(t) {
   start.write(zTXtData)
 })
 
-start = new Through()
 test('compression-iTXt', function(t) {
+  var start = new Through()
   t.plan(2)
   start
     .pipe(png.get("Warning", function (key, value) {
       t.equals(key, "Warning", "Warning iTXt compressed chunk should be found")
-      console.log(value)
-      t.equals(value, "", "check uncompressed value returned")
+      console.log(value, key)
+      t.equals(value, 'Es is verboten, um diese Datei in das GIF-Bildformat\numzuwandeln.  Sie sind gevarnt worden.', "check uncompressed value returned")
     }))
   
   start.write(iTXtData)

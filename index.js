@@ -23,7 +23,7 @@ var chunkHandlers = {
     // Not sure if this can be tidied up somewhat.
     if (compressed) {
       try {
-        var data = new Buffer (pako.inflate(deflated))  
+        var data = new Buffer (pako.inflate(unprocessed))  
         callback(keyword, data.toString('utf8'))
       } catch (err) {
         callback(keyword, null)
