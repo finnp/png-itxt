@@ -5,48 +5,152 @@ var through = require('through2')
 var pako = require('./lib/pako.min.js');
 
 const matchOperatorsRe = /[|\\{}()[\]^$+*?.]/g;
-var chunkHandlers = {
+const chunkDecoder = {
   "iTXt": function (keyword, data, callback) {
-    
-    var compressed = (data[0] == 1);
-    var compression_type = data[1];
+
+    var result = {
+      "type": "iTXt",
+      "keyword": keyword
+    }
+    result.compressed = (data[0] == 1);
+    result.compression_type = data[1];
 
     var unprocessed = data.slice(2);
     var pos = getFieldEnd(unprocessed)
-    var language = unprocessed.slice(0, pos).toString('utf8');
+    result.language = unprocessed.slice(0, pos).toString('utf8');
     unprocessed = unprocessed.slice(pos+1);
 
     pos = getFieldEnd(unprocessed);
-    var translated = unprocessed.slice(0, pos).toString('utf8');
+    result.translated = unprocessed.slice(0, pos).toString('utf8');
     unprocessed = unprocessed.slice(pos+1);
+
 
     // Not sure if this can be tidied up somewhat.
     if (compressed) {
       try {
-        var data = new Buffer (pako.inflate(unprocessed))  
-        callback(keyword, data.toString('utf8'))
+        var data = new Buffer (pako.inflate(unprocessed))
+        result.value = data.toString('utf8');
+        callback(null, result)
       } catch (err) {
-        callback(keyword, null)
+        callback(err, result)
       }
     }
     else {
-      callback(keyword, unprocessed.toString('utf8'));
+      result.value = unprocessed.toString('utf8')
+      callback(null, result);
     }
   },
-  "tEXt": function (keyword, data, callback) { callback(keyword, data.toString('utf8')); },
-  "zTXt": function (keyword, data, callback) { 
-    var compression_type = data[0] 
+  "tEXt": function (keyword, data, callback) {
+    var result = {
+      "type": "tEXt",
+      "keyword": keyword,
+      "value": data.toString('utf8')
+    }
+    callback(null, data.toString('utf8')) 
+  },
+  "zTXt": function (keyword, data, callback) {
+    var result = {
+      "type": "tEXt",
+      "keyword": keyword,
+      "compressed": true,
+      "compression_type": data[0]
+    }
+    
     try {
       var data = new Buffer (pako.inflate(data.slice(1)))  
-      callback(keyword, data.toString('utf8'))
+      result.value = data.toString('utf8')
+      callback(null, result)
     } catch (err) {
-      callback(keyword, null)
+      callback(err, result)
     }
   }
-};
+}
 
-function set(key, data) {
+const chunkEncoder = {
+  "iTXt": function (data) {
+    var keylen = Math.min(79, Buffer.byteLength(data.keyword))
+    var languagelen = data.language ? Buffer.byteLength(data.language) : 0
+    var translatedlen = data.translated ? Buffer.byteLength(data.translated) : 0
+
+    var value = data.value
+    var datalen = Buffer.byteLength(value)
+    if (data.compressed) {
+      value = pako.deflate(value)
+      datalen = Buffer.byteLength(value)
+    }
+
+    // 5 is for all the null characters that seperate the fields.
+    var buffer = new Buffer(keylen + 5 + datalen + languagelen + translatedlen)
+
+    // Write keyword and null terminate.
+    buffer.write(data.keyword, 0, keylen)
+    buffer[keylen] = 0
+
+    buffer[keylen + 1] = data.compressed ? 1 : 0
+    // Seems silly to expect this to be set as there is only one value.
+    buffer[keylen + 2] = data.compression_type ? data.compression_type : 0
+
+    var currentPos = keylen + 3
+    // check language tag
+    if (!data.language) {
+      buffer[currentPos] = 0
+      currentPos++
+    }
+    else {
+      buffer.write(data.language, currentPos, languagelen)
+      buffer[currentPos + languagelen] = 0
+      currentPos += languagelen + 1
+    }
+
+    if (!data.translated) {
+      buffer[currentPos] = 0
+      currentPos++
+    }
+    else {
+      buffer.write(data.translated, currentPos, translatedlen)
+      buffer[currentPos + translatedlenlen] = 0    
+      currentPos += translatedlen + 1
+    }
+
+    buffer.write(value, currentPos)
+    return buffer
+  },
+  "tEXt": function (keyword, data, callback) {
+    var keylen = Math.min(79, Buffer.byteLength(data.keyword))
+    // 3 is for all the null characters that seperate the fields.
+    var buffer = new Buffer(keylen + 1 + datalen)
+    buffer.write(data.keyword, 0, keylen)
+    buffer[keylen] = 0
+
+    buffer.write(data.value, keylen + 1)
+  },
+  "zTXt": function (data) {
+    var keylen = Math.min(79, Buffer.byteLength(data.keyword))
+
+    var value = data.value
+    var datalen = Buffer.byteLength(value)
+    if (data.compressed) {
+      value = pako.deflate(value)
+      datalen = Buffer.byteLength(value)
+    }
+
+    // 3 is for all the null characters that seperate the fields.
+    var buffer = new Buffer(keylen + 3 + datalen)
+    buffer.write(data.keyword, 0, keylen)
+    buffer[keylen] = 0
+
+    buffer[keylen + 1] = data.compressed ? 1 : 0
+    // Seems silly to expect this to be set as there is only one value.
+    buffer[keylen + 2] = data.compression_type ? data.compression_type : 0
+
+    buffer.write(value, keylen+3)
+    return buffer
+  }
+}
+
+function set(data, replaceAll) {
   
+  var createChunk = chunkEncoder[data.type]
   var encoder = encode()
   var decoder = decode()
   
@@ -55,14 +159,15 @@ function set(key, data) {
       this.push(chunk)
       return cb()
     }
-    if(chunk.type === 'iTXt') {
+    if(chunkType == data.type) {
       var pos = getFieldEnd(chunk.data)
-      this.found = chunk.data.slice(0, pos).toString() === key
+      this.found = chunk.data.slice(0, pos).toString() === data.keyword
     }
-    if(this.found || chunk.type === 'IEND') {
+    if((this.found || chunk.type === 'IEND')
+       && createChunk !== undefined) {
         this.push({
           'type': 'iTXt',
-          'data': createChunk(key, data)
+          'data': createChunk(data)
         })
     }
     if(!this.found) this.push(chunk)
@@ -98,7 +203,7 @@ function get(keyword, callback) {
     this.push(chunk)
     
     // Sees if there is a handler for the current type.
-    var handler = chunkHandlers[chunk.type]
+    var handler = chunkDecoders[chunk.type]
     if (handler) {
       // If there is get the keyword and it is one we are
       // looking for then pass it to the handler.
@@ -126,21 +231,6 @@ function getFieldEnd(data) {
       break
   }
   return i
-}
-
-function createChunk(key, data) {
-  var keylen = Math.min(79, Buffer.byteLength(key))
-  var buffer = new Buffer(keylen + 5 + Buffer.byteLength(data))
-  buffer.write(key, 0, keylen)
-  buffer[keylen] = 0
-  buffer[keylen + 1] = 0 // no compression
-  buffer[keylen + 2] = 0 // no compression
-  // no language tag
-  buffer[keylen + 3] = 0
-  // no translated keyword
-  buffer[keylen + 4] = 0
-  buffer.write(data, keylen + 5)
-  return buffer
 }
 
 exports.set = set
