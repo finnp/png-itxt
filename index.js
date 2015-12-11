@@ -149,24 +149,30 @@ const chunkEncoder = {
 }
 
 function set(data, replaceAll) {
-  
-  var createChunk = chunkEncoder[data.type]
+
   var encoder = encode()
-  var decoder = decode()
+  var decoder = decode()  
+
+  var createChunk = chunkEncoder[data.type]
+  if (createChunk === undefined) {
+    // Can't handle the chunk so going to ignore it.
+    return duplexer(decoder, encoder)  
+  }
   
   decoder.pipe(through.obj(function (chunk, enc, cb) {
     if(this.found) {
       this.push(chunk)
       return cb()
     }
-    if(chunkType == data.type) {
+    if(chunkType == data.type || (replaceAll 
+      && (chunkType == "iTXt" || chunkType == "zTXt" || chunkType == "tEXt"))) {
       var pos = getFieldEnd(chunk.data)
       this.found = chunk.data.slice(0, pos).toString() === data.keyword
     }
     if((this.found || chunk.type === 'IEND')
        && createChunk !== undefined) {
         this.push({
-          'type': 'iTXt',
+          'type': data.type,
           'data': createChunk(data)
         })
     }
