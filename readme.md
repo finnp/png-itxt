@@ -32,7 +32,7 @@ The module exports constants for the types of the textual chunks. These can be a
 ```
 
 ## Data Format
-Chunk data should be provided and will be returned as an object as shown below. Not that this is the full declaration for a `iTXt` chunk as will be produced by the program. However not all fields are required when passing information to the program. Additionally some of these fields are not relevant to `zTXt` and `tEXt` chunks. See the table below for details.
+Chunk data should be provided and will be returned as an object as shown below. Not that this is the full declaration for a `iTXt` chunk as will be produced by the program. However not all fields are required when passing information to the program. Additionally some of these fields are not relevant to `zTXt` and `tEXt` chunks.
 
 ```js
 {
@@ -45,16 +45,17 @@ Chunk data should be provided and will be returned as an object as shown below. 
   compression_type: 0
 }
 ```
+See the table below for details of which fields are relevent to each chunk and what their default values are.
 
-Field Name         | Chunks     | Default
-------------------------------------------------------------------
-*type*             | ALL        | iTXt
-*keyword*          | ALL        | None - must be specified for set
-*value*            | ALL        | None - must be specified for set
-*lanuage*          | iTXt       | ""
-*translated*       | iTXt       | ""
-*compressed*       | iTXt, zTXt | false
-*compression_type* | iTXt, zTXt | 0 (only vald value)
+|Field Name           | Chunks     | Default                         
+|---------------------|:----------:|-----------------------------------
+|**type**             | ALL        | iTXt
+|**keyword**          | ALL        | None - must be specified for set
+|**value**            | ALL        | None - must be specified for set
+|**lanuage**          | iTXt       | *empty string*
+|**translated**       | iTXt       | *empty string*
+|**compressed**       | iTXt, zTXt | false apart from zTXt chunks
+|**compression_type** | iTXt, zTXt | 0 (only vald value)
 
 
 ## set - Writing iTXt data
