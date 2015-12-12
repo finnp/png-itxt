@@ -127,7 +127,7 @@ const chunkEncoder = {
     var keylen = Math.min(79, Buffer.byteLength(data.keyword))
 
     // Has to be compressed so make sure it is
-    data.compress = true
+    data.compressed = true
     var value = new Buffer (pako.deflate(data.value))
     var datalen = value.length
 
