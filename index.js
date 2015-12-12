@@ -4,12 +4,16 @@ var decode = require('png-chunk-stream').decode
 var through = require('through2')
 var pako = require('./lib/pako.min.js');
 
+const zTXt = exports.zTXt = "zTXt"
+const iTXt = exports.iTXt = "iTXt"
+const tEXt = exports.tEXt = "tEXt"
 const matchOperatorsRe = /[|\\{}()[\]^$+*?.]/g;
+
 const chunkDecoder = {
-  "iTXt": function (keyword, data, callback) {
+  iTXt: function (keyword, data, callback) {
 
     var result = {
-      "type": "iTXt",
+      "type": iTXt,
       "keyword": keyword
     }
     result.compressed = (data[0] == 1);
@@ -39,17 +43,17 @@ const chunkDecoder = {
       callback(null, result);
     }
   },
-  "tEXt": function (keyword, data, callback) {
+  tEXt: function (keyword, data, callback) {
     var result = {
-      "type": "tEXt",
+      "type": tEXt,
       "keyword": keyword,
       "value": data.toString('utf8')
     }
     callback(null, result) 
   },
-  "zTXt": function (keyword, data, callback) {
+  zTXt: function (keyword, data, callback) {
     var result = {
-      "type": "zTXt",
+      "type": zTXt,
       "keyword": keyword,
       "compressed": true,
       "compression_type": data[0]
@@ -65,12 +69,12 @@ const chunkDecoder = {
 }
 
 const chunkEncoder = {
-  "iTXt": function (data) {
+  iTXt: function (data) {
     var keylen = Math.min(79, Buffer.byteLength(data.keyword))
     var languagelen = data.language ? Buffer.byteLength(data.language) : 0
     var translatedlen = data.translated ? Buffer.byteLength(data.translated) : 0
 
-    var value = new Buffer(data.compressed ? pako.deflate(value) : data.value)
+    var value = new Buffer(data.compressed ? pako.deflate(data.value) : data.value)
     var datalen = value.length
     
     // 5 is for all the null characters that seperate the fields.
@@ -109,7 +113,7 @@ const chunkEncoder = {
     value.copy(buffer, currentPos)
     return buffer
   },
-  "tEXt": function (data) {
+  tEXt: function (data) {
     var keylen = Math.min(79, Buffer.byteLength(data.keyword))
     // 3 is for all the null characters that seperate the fields.
     var buffer = new Buffer(keylen + 1 + Buffer.byteLength(data.value))
@@ -119,7 +123,7 @@ const chunkEncoder = {
     buffer.write(data.value, keylen + 1)
     return buffer
   },
-  "zTXt": function (data) {
+  zTXt: function (data) {
     var keylen = Math.min(79, Buffer.byteLength(data.keyword))
 
     // Has to be compressed so make sure it is
@@ -147,7 +151,7 @@ function set(data, replaceAll) {
 
   // Assume iTXt chunks to be created
   if (data.type === undefined) {
-    data.type = "iTXt"
+    data.type = iTXt
   }
   
   var createChunk = chunkEncoder[data.type]
@@ -162,7 +166,7 @@ function set(data, replaceAll) {
       return cb()
     }
     if(chunk.type == data.type || (replaceAll 
-      && (chunk.type == "iTXt" || chunkType == "zTXt" || chunkType == "tEXt"))) {
+      && (chunk.type == iTXt || chunkType == zTXt || chunkType == tEXt))) {
       var pos = getFieldEnd(chunk.data)
       this.found = chunk.data.slice(0, pos).toString() === data.keyword
     }
@@ -186,6 +190,11 @@ function get(keyword, filters, callback) {
     if (typeof (filters) === 'function') {
       callback = filters;
       filters = null;
+      
+      if (Array.isArray(keyword)) {
+        filters = keyword
+        keyword = null
+      }
     }
     else if (filters === undefined && 
              typeof(keyword) === 'function') {
@@ -209,13 +218,10 @@ function get(keyword, filters, callback) {
 
   var localHandlers = {}
   if (filters) {
-    if (!Array.isArray(filters)) {
-      filters = [ filters ]
-    }
-    
     var hasHandler = false;
-    for (var filter in filters) {
-      localHandlers[filter] = chunkDecoder[filer]
+    for (var index in filters) {
+      var filter = filters[index]
+      localHandlers[filter] = chunkDecoder[filter]
       hasHandler = true;
     }
     
