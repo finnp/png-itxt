@@ -187,3 +187,66 @@ In all but two cases errors are indicated by passing them to the callback functi
 fs.createReadStream('input.png')
   .pipe(pngitxt.get("pizza", 'blah'))
 ```
+
+## Browser Library
+A browser libarary, produced using browserify, is available in the dist folder. Both a normal and minified version is provided. To include it on your webpage simple copy the bundled js file to the appropriate location and add the following.
+
+```html
+\<srcipt src='pngitxt-browser.min.js'\>\</srcipt\>
+```
+
+## Command Line Tool
+The command line tool, called `png-itxt` is provided in the bin folder and will be automatically linked from the node_modules/.bin folder if installed with npm. The two tools provided are as follows.
+
+* ```png-itxt get```
+* ```png-itxt set```
+
+### png-itxt get
+This command allows you to seach an image for textual chunks of any type and will output the result in JSON format. For example the following command will search the input.png file for a iTXT or zTXt  chunk that has the keyword pizza and then output the results to standard output.
+
+```
+png-itxt get -k pizza -f iTXt,zTXt input.png
+```
+
+```
+  Usage: png-itxt-get [options] <file.png>
+
+  Tool for getting textual information from PNG images
+
+  Options:
+
+    -h, --help                 output usage information
+    -V, --version              output the version number
+    -k, --keyword <keyword>    keyword to serach for
+    -r, --regexp <expression>  regular expression to search by
+    -i, --ignorecase           makes the search case insensitive
+    -s, --stdin                reads the image data from standard input
+    -f, --filter <chunktypes>  comma seperated list of chunk types to return
+    -o, --output <file>        write results to a file
+```
+
+### png-itxt set
+This command allows you to add iTXt chunk to an image. For example the following command will add a chunk with keyword pizza and the value delicious to an image form the file input.png and then save it to output.png. A full list of all the avilable options is at the end of this section.
+
+```
+png-itxt set -k pizza -d delicious -o output.png input.png
+```
+
+```
+  Usage: png-itxt-set [options] <fileIn.png>
+
+  Tool for setting textual information into a PNG images. If no output method is specified output will be put into {fileIn}_out.png
+
+  Options:
+
+    -h, --help               output usage information
+    -V, --version            output the version number
+    -k, --keyword <keyword>  keyword to set the value for
+    -d, --data <chunkdata>   data to store with the keyword
+    -f, --file <datafile>    text file to read the value from
+    -v, --valuein            read data to store from standard input
+    -c, --compress           compress the value stored in the chunk
+    -s, --stdin              read png data from standard input
+    -p, --pipe               redirect output to stdout for processing
+    -o, --output <file>      file to output PNG data to
+```
