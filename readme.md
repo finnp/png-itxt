@@ -192,7 +192,7 @@ fs.createReadStream('input.png')
 A browser libarary, produced using browserify, is available in the dist folder. Both a normal and minified version is provided. To include it on your webpage simple copy the bundled js file to the appropriate location and add the following.
 
 ```html
-\<srcipt src='pngitxt-browser.min.js'\>\</srcipt\>
+<srcipt src='pngitxt-browser.min.js'></srcipt>
 ```
 
 ## Command Line Tool
