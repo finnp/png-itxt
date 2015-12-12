@@ -85,8 +85,8 @@ const chunkEncoder = {
     buffer[keylen] = 0
 
     buffer[keylen + 1] = data.compressed ? 1 : 0
-    // Seems silly to expect this to be set as there is only one value.
-    buffer[keylen + 2] = data.compression_type ? data.compression_type : 0
+    // Just set to zero as it is the only valid value.
+    buffer[keylen + 2] = 0
 
     var currentPos = keylen + 3
     // check language tag
@@ -136,8 +136,8 @@ const chunkEncoder = {
     buffer.write(data.keyword, 0, keylen)
     buffer[keylen] = 0
 
-    // Seems silly to expect this to be set as there is only one value.
-    buffer[keylen + 1] = data.compression_type ? data.compression_type : 0
+    // Just set to 0 as it is the only value
+    buffer[keylen + 1] = 0
 
     value.copy(buffer, keylen+2)
     return buffer
