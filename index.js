@@ -26,10 +26,9 @@ const chunkDecoder = {
 
 
     // Not sure if this can be tidied up somewhat.
-    if (compressed) {
+    if (result.compressed) {
       try {
-        var data = new Buffer (pako.inflate(unprocessed))
-        result.value = data.toString('utf8');
+        result.value = pako.inflate(unprocessed, { to: "string" })
         callback(null, result)
       } catch (err) {
         callback(err, result)
@@ -46,19 +45,18 @@ const chunkDecoder = {
       "keyword": keyword,
       "value": data.toString('utf8')
     }
-    callback(null, data.toString('utf8')) 
+    callback(null, result) 
   },
   "zTXt": function (keyword, data, callback) {
     var result = {
-      "type": "tEXt",
+      "type": "zTXt",
       "keyword": keyword,
       "compressed": true,
       "compression_type": data[0]
     }
     
     try {
-      var data = new Buffer (pako.inflate(data.slice(1)))  
-      result.value = data.toString('utf8')
+      result.value = pako.inflate(data.slice(1), { to: "string" })
       callback(null, result)
     } catch (err) {
       callback(err, result)
@@ -72,13 +70,9 @@ const chunkEncoder = {
     var languagelen = data.language ? Buffer.byteLength(data.language) : 0
     var translatedlen = data.translated ? Buffer.byteLength(data.translated) : 0
 
-    var value = data.value
-    var datalen = Buffer.byteLength(value)
-    if (data.compressed) {
-      value = pako.deflate(value)
-      datalen = Buffer.byteLength(value)
-    }
-
+    var value = new Buffer(data.compressed ? pako.deflate(value) : data.value)
+    var datalen = value.length
+    
     // 5 is for all the null characters that seperate the fields.
     var buffer = new Buffer(keylen + 5 + datalen + languagelen + translatedlen)
 
@@ -112,38 +106,36 @@ const chunkEncoder = {
       currentPos += translatedlen + 1
     }
 
-    buffer.write(value, currentPos)
+    value.copy(buffer, currentPos)
     return buffer
   },
   "tEXt": function (data) {
     var keylen = Math.min(79, Buffer.byteLength(data.keyword))
     // 3 is for all the null characters that seperate the fields.
-    var buffer = new Buffer(keylen + 1 + datalen)
+    var buffer = new Buffer(keylen + 1 + Buffer.byteLength(data.value))
     buffer.write(data.keyword, 0, keylen)
     buffer[keylen] = 0
 
     buffer.write(data.value, keylen + 1)
+    return buffer
   },
   "zTXt": function (data) {
     var keylen = Math.min(79, Buffer.byteLength(data.keyword))
 
-    var value = data.value
-    var datalen = Buffer.byteLength(value)
-    if (data.compressed) {
-      value = pako.deflate(value)
-      datalen = Buffer.byteLength(value)
-    }
+    // Has to be compressed so make sure it is
+    data.compress = true
+    var value = new Buffer (pako.deflate(data.value))
+    var datalen = value.length
 
-    // 3 is for all the null characters that seperate the fields.
-    var buffer = new Buffer(keylen + 3 + datalen)
+    // 2 is for all the null characters that seperate the fields.
+    var buffer = new Buffer(keylen + 2 + datalen)
     buffer.write(data.keyword, 0, keylen)
     buffer[keylen] = 0
 
-    buffer[keylen + 1] = data.compressed ? 1 : 0
     // Seems silly to expect this to be set as there is only one value.
-    buffer[keylen + 2] = data.compression_type ? data.compression_type : 0
+    buffer[keylen + 1] = data.compression_type ? data.compression_type : 0
 
-    buffer.write(value, keylen+3)
+    value.copy(buffer, keylen+2)
     return buffer
   }
 }
@@ -169,8 +161,8 @@ function set(data, replaceAll) {
       this.push(chunk)
       return cb()
     }
-    if(chunkType == data.type || (replaceAll 
-      && (chunkType == "iTXt" || chunkType == "zTXt" || chunkType == "tEXt"))) {
+    if(chunk.type == data.type || (replaceAll 
+      && (chunk.type == "iTXt" || chunkType == "zTXt" || chunkType == "tEXt"))) {
       var pos = getFieldEnd(chunk.data)
       this.found = chunk.data.slice(0, pos).toString() === data.keyword
     }
