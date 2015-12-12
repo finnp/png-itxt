@@ -8,11 +8,9 @@ module.exports.set = function (input, data, callback) {
   var result = []
   resultStream.on('data', function(datain) { result.push(datain); })
   resultStream.on('end', function() {
-    console.log("finishing up...")
     result = Buffer.concat(result)
     callback(result.toString('base64'))
   })
-  console.log("-", input.length)
   dataStream.end(new Buffer (input, 'binary'))
 }
 
