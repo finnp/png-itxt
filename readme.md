@@ -207,7 +207,7 @@ pngitxt.get(input, keyword, filters, function (err, data) {
           })
 ```
 
-The set function has a similar input parameter and a data parameter as before. The last parameter is a callback that gives the base64 encoded version of the data. For example if you wanted to add a n iTXt block to a picture and then display it on a page you could write the following.
+The set function has a similar input parameter and a data parameter as before. The last parameter is a callback that gives the base64 encoded version of the data. For example if you wanted to add an iTXt block to a picture and then display the picture on a page you could write the following.
 
 ```js
 // Get input from somewhere
@@ -219,7 +219,7 @@ pngitxt.set(input, { keyword: "test", value: "value" },
         })
 ```
 
-An simple, rough and ready proof of concept is available of this functionality on a webpage is available in dist/example.html.
+A simple, rough and ready proof of concept of this functionality is available in the webpage at dist/example.html.
 
 ## Command Line Tool
 The command line tool, called `png-itxt` is provided in the bin folder and will be automatically linked from the node_modules/.bin folder if installed with npm. The two tools provided are as follows.
