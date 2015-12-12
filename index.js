@@ -153,6 +153,11 @@ function set(data, replaceAll) {
   var encoder = encode()
   var decoder = decode()  
 
+  // Assume iTXt chunks to be created
+  if (data.type === undefined) {
+    data.type = "iTXt"
+  }
+  
   var createChunk = chunkEncoder[data.type]
   if (createChunk === undefined) {
     // Can't handle the chunk so going to ignore it.
