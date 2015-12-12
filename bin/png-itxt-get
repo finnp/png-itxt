@@ -14,6 +14,7 @@ program
   .option('-r, --regexp <expression>', 'regular expression to search by', RegExp)
   .option('-i, --ignorecase', 'makes the search case insensitive')
   .option('-s, --stdin', 'reads the image data from standard input')
+  .option('-f, --filter <chunktypes>', 'comma seperated list of chunk types to return')
   .option('-o, --output <file>', 'write results to a file')
   .parse(process.argv)
 
@@ -28,6 +29,11 @@ var searchTerm = null
 if (program.keyword !== undefined) {
   searchTerm = new RegExp("^" + program.keyword.replace(matchOperatorsRe, '\\$&') + "$")
 } 
+
+var searchFilter = null
+if (program.filter) {
+  searchFilter = program.filter.split(',')
+}
 
 if (program.regexp !== undefined) {
   if (searchTerm !== null) {
@@ -56,8 +62,7 @@ readStream.on('end', function() {
     writeStream.end()
 })
 
-
-readStream.pipe(pngitxt.get(searchTerm, function (err, data) {
+readStream.pipe(pngitxt.get(searchTerm, searchFilter, function (err, data) {
     if (err) {
       writeStream.write({ type: "error", message: "err.toString()" })
     }
