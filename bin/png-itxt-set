@@ -81,8 +81,8 @@ function run(err, data) {
     printError(err)
   }
 
-  readStream.pipe(pngitxt.set(program.keyword,
-          data)).pipe(writeStream)  
+  var value = { type: pngitxt.iTXt, keyword: program.keyword, value: data }
+  readStream.pipe(pngitxt.set(value)).pipe(writeStream)  
 }
 
 if (program.data !== undefined) {

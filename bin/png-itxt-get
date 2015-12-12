@@ -57,8 +57,13 @@ readStream.on('end', function() {
 })
 
 
-readStream.pipe(pngitxt.get(searchTerm, function (key, value) {
-    if (key) {
-      writeStream.write(key + " : " + value + "\n")
+readStream.pipe(pngitxt.get(searchTerm, function (err, data) {
+    if (err) {
+      writeStream.write({ type: "error", message: "err.toString()" })
+    }
+    else { 
+      if (data !== null) {
+        writeStream.write(JSON.stringify(data) + "\n")
+      }
     }
 }))
