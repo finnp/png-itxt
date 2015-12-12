@@ -269,6 +269,7 @@ function get(keyword, filters, callback) {
         handler(currentkey, chunk.data.slice(pos + 1), callback)
       }
     }
+    // Works because shouldn't be a handler for IEND
     else if(chunk.type === 'IEND' && (!this.found)) {
       callback(null, null)
     }
