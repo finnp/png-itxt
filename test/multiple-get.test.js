@@ -10,20 +10,21 @@ var start = new Through()
 test('multiple-get', function(t) {
   t.plan(10)
   start
-    .pipe(png.get(function(key, value) {
-      t.notOk(key, "no iTXt chunk key to find")
-      t.notOk(value, "no iTXt chunk value to find")
+    .pipe(png.get(function(err, data) {
+      t.equals(err, null, "no error should be found")
+      t.equals(data, null, "no data should be found")
     }))
-    .pipe(png.set('the', 'cat'))
-    .pipe(png.get(function(key, value) {
-      t.same(key, 'the', "single iTXt chunk key returned")
-      t.same(value, 'cat', "single iTXt chunk value returned")
+    .pipe(png.set({ type: 'tEXt', keyword: 'the', value: 'cat' }))
+    .pipe(png.get(function(err, data) {
+      t.equals(err, null, "no error should be found")
+      t.deepEqual(data, { type: 'tEXt', keyword: 'the', value: 'cat' },
+                  "single chunk returned")
     }))
-    .pipe(png.set('sat', 'on'))
-    .pipe(png.set('a', 'mat'))
-    .pipe(png.get(function(key, value) {
-      t.ok(key, "valid key returned")
-      t.ok(value, "valid value returned")
+    .pipe(png.set({ type: 'tEXt', keyword: 'sat', value: 'cat' }))
+    .pipe(png.set({ type: 'tEXt', keyword: 'a', value: 'cat' }))
+    .pipe(png.get(function(err, data) {
+      t.equals(err, null, "no error should be found")
+      t.equals(data.value, 'cat', "multiple chunks returned")
     }))
     
   start.write(file)
