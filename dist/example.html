@@ -55,12 +55,13 @@
         for (var i=0, file; file=files[i]; i++) {
             if (file.type.match(/image.png/)) {
                 var reader = new FileReader();
-                reader.onload = function(e2) { // finished reading file data.
+                reader.onloadend = function(e2) { // finished reading file data.
                     pngitxt.set(e2.target.result, { keyword: "test", value: "value"},
                                function (result) {
                       var img = document.createElement('img');
                       img.src = "data:image/png;base64," + result;
                       document.body.appendChild(img);
+                      console.log("Added.......")
                     })
                 }
                 reader.readAsBinaryString(file); // start reading the file data.    

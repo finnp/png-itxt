@@ -3,20 +3,17 @@ var pngitxt = require('.')
 
 module.exports.set = function (input, data, callback) {
   var dataStream = new Through()
-  dataStream.pipe(pngitxt.set(data))
+  var resultStream = dataStream.pipe(pngitxt.set(data))
 
   var result = []
-  dataStream.on('data', function(datain) { 
-    result.push(datain);
-    console.log("information in...")
-  })
-  dataStream.on('end', function() {
+  resultStream.on('data', function(datain) { result.push(datain); })
+  resultStream.on('end', function() {
     console.log("finishing up...")
-    result = new Buffer(result, 'binary')
+    result = Buffer.concat(result)
     callback(result.toString('base64'))
   })
   console.log("-", input.length)
-  dataStream.write(new Buffer (input, 'binary'))
+  dataStream.end(new Buffer (input, 'binary'))
 }
 
 
