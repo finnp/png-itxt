@@ -160,23 +160,39 @@ function set(data, replaceAll) {
   }
   
   decoder.pipe(through.obj(function (chunk, enc, cb) {
-    if(this.found) {
+    // Not sure whether to leave this here or not
+    if(this.found && (!replaceAll)) {
       this.push(chunk)
       return cb()
     }
-    if(chunk.type == data.type || (replaceAll 
-      && (chunk.type == iTXt || chunkType == zTXt || chunkType == tEXt))) {
+    
+    // Add just before end if not found.
+    if(chunk.type === 'IEND' && !this.found) {
+        this.push({ 'type': data.type, 'data': createChunk(data) })
+        this.push(chunk)
+        return cb()
+    }
+    
+    if(chunk.type == data.type || (replaceAll !== undefined
+      && (chunk.type == iTXt || chunk.type == zTXt || chunk.type == tEXt))) {
       var pos = getFieldEnd(chunk.data)
-      this.found = chunk.data.slice(0, pos).toString() === data.keyword
+      if (chunk.data.slice(0, pos).toString() === data.keyword) {
+        if (!this.found) {
+          this.push({ 'type': data.type, 'data': createChunk(data) })
+          this.found = true;
+        }
+        // If it is the same keyword and it has been replace ignore chunk.
+      }
+      else {
+        // Push all chunks where keyword not matched.
+        this.push(chunk);
+      }
     }
-    if((this.found || chunk.type === 'IEND')
-       && createChunk !== undefined) {
-        this.push({
-          'type': data.type,
-          'data': createChunk(data)
-        })
+    else {
+      // push all non textual chunks
+      this.push(chunk)
     }
-    if(!this.found) this.push(chunk)
+    
     cb()
   })).pipe(encoder)
   
@@ -216,12 +232,14 @@ function get(keyword, filters, callback) {
   var decoder = decode()
 
   var localHandlers = {}
-  if (filters) {
+  if (filters !== undefined && filters !== null) {
     var hasHandler = false;
-    for (var index in filters) {
-      var filter = filters[index]
-      localHandlers[filter] = chunkDecoder[filter]
-      hasHandler = true;
+    if (Array.isArray(filters)) {
+      for (var index in filters) {
+        var filter = filters[index]
+        localHandlers[filter] = chunkDecoder[filter]
+        hasHandler = true;
+      }
     }
     
     // If no handlers match just pass data through
