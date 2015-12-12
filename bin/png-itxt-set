@@ -13,6 +13,7 @@ program
   .option('-d, --data <chunkdata>', 'data to store with the keyword')
   .option('-f, --file <datafile>', 'text file to read the value from')
   .option('-v, --valuein', 'read data to store from standard input')
+  .option('-c, --compress', 'compress the value stored in the chunk')
   .option('-s, --stdin', 'read png data from standard input')
   .option('-p, --pipe', 'redirect output to stdout for processing')
   .option('-o, --output <file>', 'file to output PNG data to')
@@ -81,7 +82,8 @@ function run(err, data) {
     printError(err)
   }
 
-  var value = { type: pngitxt.iTXt, keyword: program.keyword, value: data }
+  var value = { type: pngitxt.iTXt, keyword: program.keyword,
+               value: data, compressed: program.compress }
   readStream.pipe(pngitxt.set(value)).pipe(writeStream)  
 }
 
