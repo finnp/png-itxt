@@ -1,0 +1,72 @@
+<html>
+  <head>
+    <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha256-KXn5puMvxCw+dAYznun+drMdG1IFl3agK0p/pqT9KAo= sha512-2e8qq0ETcfWRI4HJBzQiA3UoyFk6tbNyG+qSaIBZLyW9Xf3sWZHN/lxe9fTh1U45DpPf07yj94KsUHHWe4Yk1A==" crossorigin="anonymous"></script>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-7s5uDGW3AHqw6xtJmNNtr+OBRJUlgkNJEo78P4b0yRw= sha512-nNo+yCHEyn0smMxSswnf/OnX6/KwJuZTlNZBjauKhTK0c+zT+q5JOCx0UFhXQ6rJR9jg6Es8gPuD2uZcYDLqSw==" crossorigin="anonymous">
+    <script src="pngitxt-browser.js"></script>
+  </head>
+  <body>
+    <div id="dropZone" style="width: 100px; height: 100px; background-color: red"></div>
+<script>
+    var dropZone = document.getElementById('dropZone');
+
+    // Optional.   Show the copy icon when dragging over.  Seems to only work for chrome.
+    dropZone.addEventListener('dragover', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+    });
+
+    // Get file data on drop
+    dropZone.addEventListener('drop', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        var files = e.dataTransfer.files; // Array of all files
+        for (var i=0, file; file=files[i]; i++) {
+            if (file.type.match(/image.png/)) {
+                var reader = new FileReader();
+                reader.onload = function(e2) { // finished reading file data.
+                    pngitxt.get(e2.target.result, function (err, data) {
+                      if (!err && data)
+                        console.log(JSON.stringify(data))
+                    })
+                }
+                reader.readAsBinaryString(file); // start reading the file data.    
+            }
+        }
+    });
+</script>
+    <div id="dropZone2" style="width: 100px; height: 100px; background-color: yellow"></div>
+<script>
+    var dropZone2 = document.getElementById('dropZone2');
+
+    // Optional.   Show the copy icon when dragging over.  Seems to only work for chrome.
+    dropZone2.addEventListener('dragover', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+    });
+
+    // Get file data on drop
+    dropZone2.addEventListener('drop', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        var files = e.dataTransfer.files; // Array of all files
+        for (var i=0, file; file=files[i]; i++) {
+            if (file.type.match(/image.png/)) {
+                var reader = new FileReader();
+                reader.onload = function(e2) { // finished reading file data.
+                    pngitxt.set(e2.target.result, { keyword: "test", value: "value"},
+                               function (result) {
+                      var img = document.createElement('img');
+                      img.src = "data:image/png;base64," + result;
+                      document.body.appendChild(img);
+                    })
+                }
+                reader.readAsBinaryString(file); // start reading the file data.    
+            }
+        }
+    });
+</script>
+  </body>
+</html>
