@@ -11,7 +11,11 @@
   },
   "author": "Finn Pauls",
   "license": "MIT",
+  "bin": {
+    "png-itxt": "./bin/png-itxt"
+  },
   "dependencies": {
+    "commander": "^2.9.0",
     "duplexer": "^0.1.1",
     "pako": "^0.2.8",
     "png-chunk-stream": "^1.0.1",
