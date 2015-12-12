@@ -8,38 +8,33 @@ var file = new Buffer('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/T
 var start = new Through()
 
 test('regex-get', function(t) {
-  t.plan(16)
+  t.plan(14)
   start
-    .pipe(png.set({ keyword: 'the', value: 'cat' }))
-    .pipe(png.set({ keyword: 'thhe', value: 'cat' }))
-    .pipe(png.get(/hh/, function(err, data) {
-      t.equals(err, null, "should find no error")
-      t.deepEquals(data, { type: 'iTXt', keyword: 'thhe', value: 'cat',
-                        compressed: false, compression_type: 0, language: "",
-                        translated: ""}, "should find value based on regexp")
+    .pipe(png.set('the', 'cat'))
+    .pipe(png.set('thhe', 'cat'))
+    .pipe(png.get(/hh/, function(key, value) {
+      t.same(key, 'thhe', "simple regex works for key")
+      t.same(value, 'cat', "simple regex works for value")
     }))
-    .pipe(png.get(/THE/i, function(err, data) {
-      t.equals(err, null, "should find no error")
-      t.deepEquals(data, { type: 'iTXt', keyword: 'the', value: 'cat',
-                        compressed: false, compression_type: 0, language: "",
-                        translated: ""}, "regex with globals works for value")
+    .pipe(png.get(/THE/i, function(key, value) {
+      t.same(key, 'the', "regex with globals works for key")
+      t.same(value, 'cat', "regex with globals works for value")
     }))
-    .pipe(png.get(/^t[hH]+e/, function(err, data) {
-      t.equals(err, null, "should find no error")
-      t.ok(data.keyword, "regex works when option groups defined")
-      t.equal(data.value, "cat", "regex works when option groups defined")
+    .pipe(png.get(/^t[hH]+e/, function(key, value) {
+      t.ok(key, "regex works when option groups defined")
+      t.ok(value, "regex works when option groups defined")
     }))
-    .pipe(png.get(/THE/, function(err, data) {
-      t.equals(err, null, "should find no error")
-      t.deepEqual(data, null, "regex works when nothing to find")
+    .pipe(png.get(/THE/, function(key, value) {
+      t.deepEqual(key, null, "regex works when nothing to find")
+      t.deepEqual(value, null, "regex works when nothing to find")
     }))
-    .pipe(png.get('th*', function(err, data) {
-      t.equals(err, null, "should find no error")
-      t.deepEqual(data, null, "regex characters should not work in string.")
+    .pipe(png.get('th*', function(key, value) {
+      t.deepEqual(key, null, "regex characters should not work in string.")
+      t.deepEqual(value, null, "regex characters should not work in string.")
     }))
-    .pipe(png.get('th', function(err, data) {
-      t.equals(err, null, "should find no error")
-      t.deepEqual(data, null, "strings should not get partial matches.")
+    .pipe(png.get('th', function(key, value) {
+      t.deepEqual(key, null, "strings should not get partial matches.")
+      t.deepEqual(value, null, "strings should not get partial matches.")
     }))
 
     // TODO add tests for when string are passed in and converted to RegExp
