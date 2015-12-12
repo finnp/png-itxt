@@ -1,35 +1,105 @@
 # png-itxt 
 [![Build Status](https://travis-ci.org/briancullen/png-itxt.svg?branch=all-text-chunks)](https://travis-ci.org/briancullen/png-itxt)
 
-Tool for adding and reading textual data to PNGs using streams. The library will read data from any of the three textual data chunks (tEXt, zTXT and iTXt). The data can be searched for a particular keyword, set of keywords that match a regular expression or all keywords. Only iTXt blocks can be added to the PNG data and these block must be uncompressed.
+Tool for adding and reading textual data in PNG images using streams. All three textual chunks (`iTXt`, `zTXt` and `tEXt`) can be both read and written by the tool. Chunks can be filtered by chunk type and keyword as required. Compressing and decompressing of data, where appropriate, is handled transparently to the user so you only ever see the uncompressed values.
+
+Three different methods are provided for using the tool:
+
+* command line
+* client side browser (thanks to browserify)
+* node library (via require)
+
 
 Install with
 ```
 npm install png-itxt
 ```
 
-## set - Writing iTXt data
-
-Set will modify or add the [key, value] pair. It will overwrite the any iTXt data chunk that already has the specified key.
+## Using in Node
+To use the tool in your node programs you must first require the module. If installed with npm then  you could write the following.
 
 ```js
 var pngitxt = require('png-itxt')
+```
 
+## Constants
+The module exports constants for the types of the textual chunks. These can be accessed as follows.
+
+```js
+  pngitxt.iTXt  // type for iTXt chunks
+  pngitxt.zTXt  // type for zTXt chunks
+  pngitxt.tEXt  // type for tEXt chunks
+```
+
+## Data Format
+Chunk data should be provided and will be returned as an object as shown below. Not that this is the full declaration for a `iTXt` chunk as will be produced by the program. However not all fields are required when passing information to the program. Additionally some of these fields are not relevant to `zTXt` and `tEXt` chunks. See the table below for details.
+
+```js
+{
+  type: 'iTXt',
+  keyword: 'keyword',
+  value: 'value',
+  language: '',
+  translated '',
+  compressed: false,
+  compression_type: 0
+}
+```
+
+Field Name         | Chunks     | Default
+------------------------------------------------------------------
+*type*             | ALL        | iTXt
+*keyword*          | ALL        | None - must be specified for set
+*value*            | ALL        | None - must be specified for set
+*lanuage*          | iTXt       | ""
+*translated*       | iTXt       | ""
+*compressed*       | iTXt, zTXt | false
+*compression_type* | iTXt, zTXt | 0 (only vald value)
+
+
+## set - Writing iTXt data
+
+The `set` function can be used to write new textual chunks to a image or replace existing ones. The following example shows how a new iTXt chunk can be added with the keyword pizza and the value delicious. While only these two options are specified here any of the other fields identified earlier can be specified. If compressed is set to true then the value will be compressed before it is written to the image.
+
+```js
 fs.createReadStream('input.png')
-  .pipe(pngitxt.set('pizza', 'delicous'))
+  .pipe(pngitxt.set( { keyword: 'pizza', value: 'delicious' } ))
   .pipe(fs.createWriteStream('output.png'))
 ```
 
-## get - Reading iTXt data
+The set function will overwrite any chunk of the same type and the same keyword. In the previous example is there were already iTXt chunks with the keyword pizza (the spec allows for more than one chunk with the same keyword) then the values stored in those chunks would be lost.
 
-Note: All text blocks (iTXt, tEXT, zTXT) will be found and returned by this utility.
-
-### Callback Signature
-The callback to all the get methods is given two parameters. The keyword associated with the chunk being returned and the value which has been uncompressed if necessary.
+It is also possible to have different types of textual chunk with the same keyword. An option is provided to allow you to replace all textual chunks with the same keyword regardless of their type. To do this specify the value `true` as the second parameter to the function.
 
 ```js
-function pngtxtCallback (key, value) {
-    console.log(key, ":", value)
+fs.createReadStream('input.png')
+  .pipe(pngitxt.set( { keyword: 'pizza', value: 'delicious' }, true ))
+  .pipe(fs.createWriteStream('output.png'))
+```
+
+In this case if there were already an iTXt and tEXt chunk with the keyword pizza then they would both be replaced by a single iTXt chunk with the new value.
+
+### Exceptions
+An exception will be thrown if you pass in an unknow chunk type.
+
+```js
+// This will cause an exception to be thrown.
+fs.createReadStream('input.png')
+  .pipe(pngitxt.set( { type: 'causeanexception',
+        keyword: 'pizza', value: 'delicious' } ))
+  .pipe(fs.createWriteStream('output.png'))
+```
+
+
+## get - Reading iTXt data
+Retrieval of information is achieved using the get function and callbacks. The callback will be invoked each time a matching chunk is found. It cannot be assumed that callback will only be called once for a particular keyword. You are guaranteed that your callback will be called at least once even if no matching chunks are found - in that case a null is provided instead of data.
+
+### Callback Signature
+The callback to all the get methods is given two parameters. The first is used to indicate whether or not an error was encountered. The second returns the data found in the format outlined above. In the case of an error data may not be null. For example if the error was caused when trying to inflate a compressed value then all the other information collected about the chunk will be returned with the error.
+
+```js
+function pngtxtCallback (err, data) {
+    console.log(data.keyword, ":", data.value)
 }
 ```
 
@@ -37,9 +107,11 @@ function pngtxtCallback (key, value) {
 To find the text associated with a specific keyword you must call get and provide both the keyword and a callback. Passing `null` as the keyword will cause all textual chunks to be passed to the callback. If the keyword is not found the callback will be called with `null` for both parameters.
 
 ```js
-fs.createReadStream('output.png')
-  .pipe(pngitxt.get('pizza', function (key, value) {
-    console.log(key, ":", value) // pizza : delicious
+fs.createReadStream('input.png')
+  .pipe(pngitxt.get('pizza', function (err, data) {
+    if (!err) {
+      console.log(data.keyword, ":", data.value) // pizza : delicious
+    }
   }))
 ```
 
@@ -47,9 +119,11 @@ fs.createReadStream('output.png')
 Instead of providing a keyword you can provide a regular expression and all chunks whose keywords match the regular expression will be passed to the callback function. If no chunks are found then the callback will be called once with `null` for both parameters.
 
 ```js
-fs.createReadStream('output.png')
-  .pipe(pngitxt.get(/Pi[z]{2}a/i, function (key, value) {
-    console.log(key, ":", value) // pizza : delicious
+fs.createReadStream('input.png')
+  .pipe(pngitxt.get(/Pi[z]{2}a/i, function (err, data) {
+    if (!err) {
+      console.log(data.keyword, ":", data.value) // pizza : delicious
+    }
   }))
 ```
 
@@ -57,8 +131,59 @@ fs.createReadStream('output.png')
 To find all chunks simply provide a callback that takes two parameters. If no textual chunks are found the callback will be called once with `null` for both parameters. Otherwise it will be called for each block.
 
 ```js
-fs.createReadStream('output.png')
-  .pipe(pngitxt.get(function (key, value) {
-    console.log(key, ":", value) // cat : delicious
+fs.createReadStream('input.png')
+  .pipe(pngitxt.get(function (err, data) {
+    if (!err) {
+      console.log(data.keyword, ":", data.value) // pizza : delicious
+    }
   }))
+```
+
+### Filtering by Chunk Type
+To filter the chunks by type you provide an array of acceptable chunk types. For example the following code shows how to filter the data so that you only get tEXt chunks with the keyword pizza.
+
+```js
+// This will find all the tEXt chunks with the keyword pizza
+fs.createReadStream('input.png')
+  .pipe(pngitxt.get('pizza', [ pngitxt.tEXt ], function (err, data) {
+    if (!err) {
+      console.log(data.keyword, ":", data.value) // pizza : delicious
+    }
+  }))
+```
+
+Please note that even if you are only looking for one type of chunk the value must be passed as an array or an exception will be thrown. You can specify whatever combination of chunk types that you want but be aware that specifying all 3, as shown below, is the equivalent of having no filter.
+
+```js
+// This is the equivalent of having no filter
+fs.createReadStream('input.png')
+  .pipe(pngitxt.get('pizza', [ pngitxt.tEXt, pngitxt.zTXt, pngitxt.iTXt ],
+    function (err, data) {
+      if (!err) {
+        console.log(data.keyword, ":", data.value) // pizza : delicious
+    }
+  }))
+```
+
+If no keyword is specified then the filter array can be provided as the first parameter to the function.
+
+```js
+// This will find all the iTXt and zTXt chunks.
+fs.createReadStream('input.png')
+  .pipe(pngitxt.get([pngitxt.iTXt, pngitxt.zTXt], function (err, data) {
+    if (!err) {
+      console.log(data.keyword, ":", data.value) // pizza : delicious
+    }
+  }))
+```
+
+### Exceptions
+In all but two cases errors are indicated by passing them to the callback function. However if no callback function is provided or the filter arguement is incorrect (i.e. it is not an array or doesn't contain any valid chunk types) then exceptions will be thrown to indicate this.
+
+```js
+// This will cause an exception as there
+// is no callback function provided and the
+// filter is not correct.
+fs.createReadStream('input.png')
+  .pipe(pngitxt.get("pizza", 'blah'))
 ```
