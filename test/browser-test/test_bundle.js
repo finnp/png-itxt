@@ -6,101 +6,260 @@ var decode = require('png-chunk-stream').decode
 var through = require('through2')
 var pako = require('./lib/pako.min.js');
 
+const zTXt = exports.zTXt = "zTXt"
+const iTXt = exports.iTXt = "iTXt"
+const tEXt = exports.tEXt = "tEXt"
 const matchOperatorsRe = /[|\\{}()[\]^$+*?.]/g;
-var chunkHandlers = {
-  "iTXt": function (keyword, data, callback) {
-    
-    var compressed = (data[0] == 1);
-    var compression_type = data[1];
+
+const chunkDecoder = {
+  iTXt: function (keyword, data, callback) {
+
+    var result = {
+      "type": iTXt,
+      "keyword": keyword
+    }
+    result.compressed = (data[0] == 1);
+    result.compression_type = data[1];
 
     var unprocessed = data.slice(2);
     var pos = getFieldEnd(unprocessed)
-    var language = unprocessed.slice(0, pos).toString('utf8');
+    result.language = unprocessed.slice(0, pos).toString('utf8');
     unprocessed = unprocessed.slice(pos+1);
 
     pos = getFieldEnd(unprocessed);
-    var translated = unprocessed.slice(0, pos).toString('utf8');
+    result.translated = unprocessed.slice(0, pos).toString('utf8');
     unprocessed = unprocessed.slice(pos+1);
 
+
     // Not sure if this can be tidied up somewhat.
-    if (compressed) {
+    if (result.compressed) {
       try {
-        var data = new Buffer (pako.inflate(unprocessed))  
-        callback(keyword, data.toString('utf8'))
+        result.value = pako.inflate(unprocessed, { to: "string" })
+        callback(null, result)
       } catch (err) {
-        callback(keyword, null)
+        callback(err, result)
       }
     }
     else {
-      callback(keyword, unprocessed.toString('utf8'));
+      result.value = unprocessed.toString('utf8')
+      callback(null, result);
     }
   },
-  "tEXt": function (keyword, data, callback) { callback(keyword, data.toString('utf8')); },
-  "zTXt": function (keyword, data, callback) { 
-    var compression_type = data[0] 
+  tEXt: function (keyword, data, callback) {
+    var result = {
+      "type": tEXt,
+      "keyword": keyword,
+      "value": data.toString('utf8')
+    }
+    callback(null, result) 
+  },
+  zTXt: function (keyword, data, callback) {
+    var result = {
+      "type": zTXt,
+      "keyword": keyword,
+      "compressed": true,
+      "compression_type": data[0]
+    }
+    
     try {
-      var data = new Buffer (pako.inflate(data.slice(1)))  
-      callback(keyword, data.toString('utf8'))
+      result.value = pako.inflate(data.slice(1), { to: "string" })
+      callback(null, result)
     } catch (err) {
-      callback(keyword, null)
+      callback(err, result)
     }
   }
-};
+}
 
-function set(key, data) {
-  
+const chunkEncoder = {
+  iTXt: function (data) {
+    var keylen = Math.min(79, Buffer.byteLength(data.keyword))
+    var languagelen = data.language ? Buffer.byteLength(data.language) : 0
+    var translatedlen = data.translated ? Buffer.byteLength(data.translated) : 0
+
+    var value = new Buffer(data.compressed ? pako.deflate(data.value) : data.value)
+    var datalen = value.length
+    
+    // 5 is for all the null characters that seperate the fields.
+    var buffer = new Buffer(keylen + 5 + datalen + languagelen + translatedlen)
+
+    // Write keyword and null terminate.
+    buffer.write(data.keyword, 0, keylen)
+    buffer[keylen] = 0
+
+    buffer[keylen + 1] = data.compressed ? 1 : 0
+    // Seems silly to expect this to be set as there is only one value.
+    buffer[keylen + 2] = data.compression_type ? data.compression_type : 0
+
+    var currentPos = keylen + 3
+    // check language tag
+    if (!data.language) {
+      buffer[currentPos] = 0
+      currentPos++
+    }
+    else {
+      buffer.write(data.language, currentPos, languagelen)
+      buffer[currentPos + languagelen] = 0
+      currentPos += languagelen + 1
+    }
+
+    if (!data.translated) {
+      buffer[currentPos] = 0
+      currentPos++
+    }
+    else {
+      buffer.write(data.translated, currentPos, translatedlen)
+      buffer[currentPos + translatedlenlen] = 0    
+      currentPos += translatedlen + 1
+    }
+
+    value.copy(buffer, currentPos)
+    return buffer
+  },
+  tEXt: function (data) {
+    var keylen = Math.min(79, Buffer.byteLength(data.keyword))
+    // 3 is for all the null characters that seperate the fields.
+    var buffer = new Buffer(keylen + 1 + Buffer.byteLength(data.value))
+    buffer.write(data.keyword, 0, keylen)
+    buffer[keylen] = 0
+
+    buffer.write(data.value, keylen + 1)
+    return buffer
+  },
+  zTXt: function (data) {
+    var keylen = Math.min(79, Buffer.byteLength(data.keyword))
+
+    // Has to be compressed so make sure it is
+    data.compress = true
+    var value = new Buffer (pako.deflate(data.value))
+    var datalen = value.length
+
+    // 2 is for all the null characters that seperate the fields.
+    var buffer = new Buffer(keylen + 2 + datalen)
+    buffer.write(data.keyword, 0, keylen)
+    buffer[keylen] = 0
+
+    // Seems silly to expect this to be set as there is only one value.
+    buffer[keylen + 1] = data.compression_type ? data.compression_type : 0
+
+    value.copy(buffer, keylen+2)
+    return buffer
+  }
+}
+
+function set(data, replaceAll) {
+
   var encoder = encode()
-  var decoder = decode()
+  var decoder = decode()  
+
+  // Assume iTXt chunks to be created
+  if (data.type === undefined) {
+    data.type = iTXt
+  }
+  
+  var createChunk = chunkEncoder[data.type]
+  if (createChunk === undefined) {
+    throw new Error("invalid chunk type specified") 
+  }
   
   decoder.pipe(through.obj(function (chunk, enc, cb) {
-    if(this.found) {
+    // Not sure whether to leave this here or not
+    if(this.found && (!replaceAll)) {
       this.push(chunk)
       return cb()
     }
-    if(chunk.type === 'iTXt') {
+    
+    // Add just before end if not found.
+    if(chunk.type === 'IEND' && !this.found) {
+        this.push({ 'type': data.type, 'data': createChunk(data) })
+        this.push(chunk)
+        return cb()
+    }
+    
+    if(chunk.type == data.type || (replaceAll !== undefined
+      && (chunk.type == iTXt || chunk.type == zTXt || chunk.type == tEXt))) {
       var pos = getFieldEnd(chunk.data)
-      this.found = chunk.data.slice(0, pos).toString() === key
+      if (chunk.data.slice(0, pos).toString() === data.keyword) {
+        if (!this.found) {
+          this.push({ 'type': data.type, 'data': createChunk(data) })
+          this.found = true;
+        }
+        // If it is the same keyword and it has been replace ignore chunk.
+      }
+      else {
+        // Push all chunks where keyword not matched.
+        this.push(chunk);
+      }
     }
-    if(this.found || chunk.type === 'IEND') {
-        this.push({
-          'type': 'iTXt',
-          'data': createChunk(key, data)
-        })
+    else {
+      // push all non textual chunks
+      this.push(chunk)
     }
-    if(!this.found) this.push(chunk)
+    
     cb()
   })).pipe(encoder)
   
   return duplexer(decoder, encoder)
 }
 
-function get(keyword, callback) {
-  // Check if a keyword was given or if it was just a callback.
+function get(keyword, filters, callback) {
+  // Make sure that there is a callback function
   if (!callback) {
-    if (typeof(keyword) === 'function') {
+    if (typeof (filters) === 'function') {
+      callback = filters;
+      filters = null;
+      
+      if (Array.isArray(keyword)) {
+        filters = keyword
+        keyword = null
+      }
+    }
+    else if (filters === undefined && 
+             typeof(keyword) === 'function') {
       callback = keyword
       keyword = null
+      filters = null;
     }
     else {
       // throw exception if there is no callback.
-      throw new Error ("no callback provided");
+      throw new Error ("no callback or invalid arguments provided");
     }
   }
   
-  // If a keyword has been specified make sure it
-  // is a regular expression.
+  // If a keyword has been specified make sure it is a regular expression.
   if ((keyword !== null) && (!(keyword instanceof RegExp))) {
     keyword = new RegExp("^" + keyword.toString().replace(matchOperatorsRe, '\\$&') + "$")
   }
   
   var encoder = encode()
   var decoder = decode()
-  
+
+  var localHandlers = {}
+  if (filters !== undefined && filters !== null) {
+    var hasHandler = false;
+    if (Array.isArray(filters)) {
+      for (var index in filters) {
+        var filter = filters[index]
+        localHandlers[filter] = chunkDecoder[filter]
+        hasHandler = true;
+      }
+    }
+    
+    // If no handlers match just pass data through
+    // without looking at it.
+    if (!hasHandler) {
+      callback(new Error("invalid filter specified"), null)
+      return duplexer(decoder, encoder);
+    }
+  }
+  else {
+    localHandlers = chunkDecoder
+  }
+    
   decoder.pipe(through.obj(function (chunk, enc, cb) {
     this.push(chunk)
     
     // Sees if there is a handler for the current type.
-    var handler = chunkHandlers[chunk.type]
+    var handler = localHandlers[chunk.type]
     if (handler) {
       // If there is get the keyword and it is one we are
       // looking for then pass it to the handler.
@@ -130,24 +289,17 @@ function getFieldEnd(data) {
   return i
 }
 
-function createChunk(key, data) {
-  var keylen = Math.min(79, Buffer.byteLength(key))
-  var buffer = new Buffer(keylen + 5 + Buffer.byteLength(data))
-  buffer.write(key, 0, keylen)
-  buffer[keylen] = 0
-  buffer[keylen + 1] = 0 // no compression
-  buffer[keylen + 2] = 0 // no compression
-  // no language tag
-  buffer[keylen + 3] = 0
-  // no translated keyword
-  buffer[keylen + 4] = 0
-  buffer.write(data, keylen + 5)
-  return buffer
-}
-
 exports.set = set
 exports.get = get
-exports.createChunk = exports.chunk = createChunk
+exports.createChunk = exports.chunk = function (data) {
+  var createChunk = chunkEncoder[data.type]
+  if (createChunk === undefined) {
+    // Can't handle the chunk
+    return null
+  }
+  
+  return createChunk(data)
+}
 }).call(this,require("buffer").Buffer)
 },{"./lib/pako.min.js":2,"buffer":8,"duplexer":14,"png-chunk-stream":22,"through2":50}],2:[function(require,module,exports){
 (function (global){
@@ -8997,25 +9149,80 @@ var test = require('tape')
 
 var file = new Buffer('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/TQBcNTh/AAAAAXRSTlPM0jRW/QAAAApJREFUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII', 'base64')
 
-var start = new Through()
-
-test('base-functions', function (t) {
-  t.plan(3)
+test('base-iTXt-getset-functions', function (t) {
+  var start = new Through()
+  t.plan(6)
   start
-    .pipe(png.set('cat', 'cute'))
-    .pipe(png.get('cat', function (key, value) {
-      t.equal(value, 'cute', 'should get value')
+    .pipe(png.set({ keyword: "cat", value: "cute" }))
+    .pipe(png.get('cat', function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: "cat", value: "cute", type: "iTXt",
+                        compressed: false, compression_type: 0, language: "",
+                        translated: ""}, "should get expected result for set/get");
     }))
-    .pipe(png.get('pig', function (key, value) {
-      t.deepEqual(value, null, 'should get null')
+    .pipe(png.get('pig', function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.equal(data, null, 'should get null for no results')
     }))
-    .pipe(png.set('cat', 'fluffy'))
-    .pipe(png.get('cat', function (key, value) {
-      t.equal(value, 'fluffy', 'should only be called once')
+    .pipe(png.set({ keyword: 'cat', value: 'fluffy' }))
+    .pipe(png.get('cat', function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: "cat", value: "fluffy", type: "iTXt",
+                        compressed: false, compression_type: 0, language: "",
+                        translated: ""}, "should only get one value for cat");
     }))
     
   start.write(file)
 })
+
+test('base-tEXt-simplegetset-functions', function (t) {
+  var start = new Through()
+  t.plan(6)
+  start
+    .pipe(png.set({ type: "tEXt", keyword: "cat", value: "cute" }))
+    .pipe(png.get('cat', function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: "cat", value: "cute", type: "tEXt"},
+                  "should get expected result for set/get");
+    }))
+    .pipe(png.get('pig', function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.equal(data, null, 'should get null for no results')
+    }))
+    .pipe(png.set({ type: "tEXt", keyword: 'cat', value: 'fluffy' }))
+    .pipe(png.get('cat', function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: "cat", value: "fluffy", type: "tEXt"},
+                  "should only get one value for cat");
+    }))
+    
+  start.write(file)
+})
+
+test('base-zTXt-simplegetset-functions', function (t) {
+  var start = new Through()
+  t.plan(6)
+  start
+    .pipe(png.set({ type: "zTXt", keyword: "cat", value: "cute" }))
+    .pipe(png.get('cat', function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: "cat", value: "cute", type: "zTXt", compressed: true,
+                        compression_type: 0}, "should get expected result for set/get");
+    }))
+    .pipe(png.get('pig', function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.equal(data, null, 'should get null for no results')
+    }))
+    .pipe(png.set({ type: "zTXt", keyword: 'cat', value: 'fluffy' }))
+    .pipe(png.get('cat', function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: "cat", value: "fluffy", type: "zTXt", compressed: true,
+                        compression_type: 0}, "should only get one value for cat");
+    }))
+    
+  start.write(file)
+})
+
 
 }).call(this,require("buffer").Buffer)
 },{"../":1,"buffer":8,"fs":5,"stream":33,"tape":45}],56:[function(require,module,exports){
@@ -9029,29 +9236,66 @@ var zTXtData = new Buffer("iVBORw0KGgoAAAANSUhEUgAAACAAAAAgBAAAAACT4cgpAAAABGdBT
 
 var iTXtData = new Buffer("iVBORw0KGgoAAAANSUhEUgAAAAoAAAALCAYAAABGbhwYAAAABGdBTUEAALGPC/xhBQAAAARzQklUBQUFBU2lLfYAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAAscENBTGJvZ3VzIHVuaXRzAAAAAAAAAP//AAJmb28vYmFyADEuMGUwADY1LjUzNWUzV0B7HAAAAAd0SU1FB8wGBxE6CI7/JnoAAAAGYktHRADgAOAAgJXNLyAAAAAJdEVYdFRpdGxlAFBOR9wBeTUAAAAnaVRYdEF1dGhvcgAAAGZyAEF1dGV1cgBMYSBwbHVtZSBkZSBtYSB0YW50ZU/bcuEAAADKelRYdERlc2NyaXB0aW9uAAB42k2PTWrDQAyF9z7FW7aQmEIhJwjZtQ1ucNaTGTkW2NIwkhN8+4y76vbxvb+OJFGhhNuKMxVjc5JI0AE9G6vgzed3dGHFpYRIpek3quqf7ccOi7Hc4SPhwjMZvumJTucgGFQcQRKOX6erajq0zS9vyeeffr/FJa28qCNxoTj5Clty1uJgcSpTLUvQxfPiu8ZHNgw8EcZguBEJosqDilfItRb9d/Ec7oQHB4Qmq/k+F41kf1vrv9y+AG4IVyNpKlL5AAAAb2lUWHRXYXJuaW5nAAEAZGUAV0FSTklORwB4nAXBwQ2DMAwF0Hun+AOUDIEKiDMTuPIHWSKOFCdB6vR9bwlYYLB+S6O/0TPUGMRHGg3mUAls+zrNdutZapb26vnXH3Hl7Qk4jAhzxcUh1RueUpWe/rKYICRVGEZ3AAAAG0lEQVQoU2P8DwQMRAAmKE0QjCrEC6itkIEBABCLBBKfcg7nAAAAAElFTkSuQmCC", "base64")
 
-test('compression-zTXt', function(t) {
+test('compression-zTXt-read', function(t) {
   var start = new Through()
-  t.plan(6)
+  t.plan(7)
   start
-    .pipe(png.get("Copyright", function (key, value) {
-      t.equals(key, "Copyright", "Copyright zTXt chunk should be found")
-      t.equals(value, "Copyright Willem van Schaik, Singapore 1995-96", "check uncompressed value returned")
+    .pipe(png.get("Copyright", function (err, data) {
+      t.equals(err, null, "no error should be found")
+      t.equals(data.keyword, "Copyright", "Copyright zTXt chunk should be found")
+      t.equals(data.value, "Copyright Willem van Schaik, Singapore 1995-96", "check uncompressed value returned")
     }))
-    .pipe(png.get(/^D[ei]sc/, function (key, value) {
-      t.ok(key, "check a keyword is found")
-      t.ok(value, "check compressed value returned")
+    .pipe(png.get(/^D[ei]sc/, function (err, data) {
+      t.equals(err, null, "no error should be found")
+      t.ok(data.value, "check multiple compressed values returned")
     }))
   start.write(zTXtData)
 })
 
-test('compression-iTXt', function(t) {
+test('compression-zTXt-write', function(t) {
   var start = new Through()
   t.plan(2)
   start
-    .pipe(png.get("Warning", function (key, value) {
-      t.equals(key, "Warning", "Warning iTXt compressed chunk should be found")
-      console.log(value, key)
-      t.equals(value, 'Es is verboten, um diese Datei in das GIF-Bildformat\numzuwandeln.  Sie sind gevarnt worden.', "check uncompressed value returned")
+    .pipe(png.set({ type: 'zTXt', keyword: 'test', value: 'value' }))
+    .pipe(png.get("test", ['zTXt'], function (err, data) {
+      t.equals(err, null, "no error should be found")
+      t.deepEquals(data, { type: 'zTXt', keyword: 'test', value: 'value',
+                  compressed: true, compression_type: 0 }, "found compressed zTXt chunk")
+    }))
+  start.write(zTXtData)
+})
+
+test('compression-iTXt-read', function(t) {
+  var start = new Through()
+  t.plan(3)
+  start
+    .pipe(png.get("Warning", function (err, data) {
+      t.equals(err, null, "no error should be found")
+      t.equals(data.keyword, "Warning", "Warning iTXt compressed chunk should be found")
+      t.equals(data.value, 'Es is verboten, um diese Datei in das GIF-Bildformat\numzuwandeln.  Sie sind gevarnt worden.', "check uncompressed value returned")
+    }))
+  
+  start.write(iTXtData)
+})
+
+test('compression-iTXt-write', function(t) {
+  var start = new Through()
+  var test_data = { 
+    type: 'iTXt',
+    keyword: 'test',
+    value: 'value',
+    compressed: true,
+    compression_type: 0,
+    language: "",
+    translated: ""
+  }
+  
+  t.plan(2)
+  start
+    .pipe(png.set(test_data))
+    .pipe(png.get(test_data.keyword, ['iTXt'], function (err, data) {
+      t.equals(err, null, "no error should be found")
+      t.deepEquals(data, test_data, "found compressed iTXt chunk")
     }))
   
   start.write(iTXtData)
@@ -9067,30 +9311,54 @@ var test = require('tape')
 
 var file = new Buffer('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/TQBcNTh/AAAAAXRSTlPM0jRW/QAAAApJREFUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII', 'base64')
 
-var start = new Through()
-
-test('multiple-get', function(t) {
-  t.plan(10)
+test('filter-error-functions', function (t) {
+  var start = new Through()
+  t.plan(4)
   start
-    .pipe(png.get(function(key, value) {
-      t.notOk(key, "no iTXt chunk key to find")
-      t.notOk(value, "no iTXt chunk value to find")
+    //.pipe(png.set({ type: 'blah', keyword: "cat", value: "cute" }))
+    .pipe(png.get('cat', "iTXt", function (err, data) {
+      t.equals(err.message, 'invalid filter specified',
+               'should have an error for invlid filter')
+      t.deepEqual(data, null, "should get no information on error");
     }))
-    .pipe(png.set('the', 'cat'))
-    .pipe(png.get(function(key, value) {
-      t.same(key, 'the', "single iTXt chunk key returned")
-      t.same(value, 'cat', "single iTXt chunk value returned")
-    }))
-    .pipe(png.set('sat', 'on'))
-    .pipe(png.set('a', 'mat'))
-    .pipe(png.get(function(key, value) {
-      t.ok(key, "valid key returned")
-      t.ok(value, "valid value returned")
+    .pipe(png.get('cat', true, function (err, data) {
+      t.equals(err.message, 'invalid filter specified',
+               'should have an error for invlid filter')
+      t.equals(data, null, "should get no information on error");
     }))
     
   start.write(file)
 })
 
+test('set-error-functions', function (t) {
+  var start = new Through()
+  t.plan(1)
+  
+  try {
+    start.pipe(png.set({ type: 'blah', keyword: "cat", value: "cute" }))
+    start.write(file)
+    t.fail("should have caused an exception with invalid chunk type")
+  }
+  catch (err) {
+    t.equals(err.message, "invalid chunk type specified",
+            "should cause error with invalid chunk type")
+  }
+})
+
+test('get-error-functions', function (t) {
+  var start = new Through()
+  t.plan(1)
+  
+  try {
+    start.pipe(png.get("cat"))
+    start.write(file)
+    t.fail("should have caused an exception with no callback")
+  }
+  catch (err) {
+    t.equals(err.message, "no callback or invalid arguments provided",
+            "should cause error when callback not provided")
+  }
+})
 
 }).call(this,require("buffer").Buffer)
 },{"../":1,"buffer":8,"fs":5,"stream":33,"tape":45}],58:[function(require,module,exports){
@@ -9102,42 +9370,235 @@ var test = require('tape')
 
 var file = new Buffer('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/TQBcNTh/AAAAAXRSTlPM0jRW/QAAAApJREFUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII', 'base64')
 
+test('get-filter-single-functions', function (t) {
+  var start = new Through()
+  t.plan(12)
+  start
+    .pipe(png.set({ keyword: "cat", value: "cute" }))
+    .pipe(png.get('cat', [ 'iTXt' ], function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: "cat", value: "cute", type: "iTXt",
+                        compressed: false, compression_type: 0, language: "",
+                        translated: ""}, "should get expected result for set/get");
+    }))
+    .pipe(png.get(['iTXt'], function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: "cat", value: "cute", type: "iTXt",
+                        compressed: false, compression_type: 0, language: "",
+                        translated: ""}, "should get expected result for set/get");
+    }))
+    .pipe(png.get('cat', [ 'tEXt' ], function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, null, "should not find the iTXt chunk");
+    }))
+    .pipe(png.get('cat', [ 'zTXt' ], function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, null, "should not find the iTXt chunk");
+    }))
+    .pipe(png.get([ 'zTXt' ], function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, null, "should not find the iTXt chunk");
+    }))
+    .pipe(png.get([ 'tEXt' ], function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, null, "should not find the iTXt chunk");
+  }))
+  start.write(file)
+})
+
+test('get-filter-multiple-functions', function (t) {
+  var start = new Through()
+  t.plan(10)
+  start
+    .pipe(png.set({ type: "tEXt", keyword: "cat", value: "cute" }))
+    .pipe(png.get('cat', [ 'iTXt', 'tEXt' ], function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: "cat", value: "cute", type: "tEXt" },
+                  "should get expected result for set/get");
+    }))
+    .pipe(png.get('cat', [ 'iTXt', 'zTXt', 'tEXt' ], function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: "cat", value: "cute", type: "tEXt" },
+                 "should get expected result for set/get");
+    }))
+    .pipe(png.get(['iTXt', 'tEXt'], function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: "cat", value: "cute", type: "tEXt" },
+                  "should get expected result for set/get");
+    }))
+    .pipe(png.get(['iTXt', 'zTXt', 'tEXt'], function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: "cat", value: "cute", type: "tEXt" },
+                  "should get expected result for set/get");
+    }))
+    .pipe(png.get('cat', ['zTXt', 'iTXt'], function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, null, "should not find the iTXt chunk");
+  }))
+  start.write(file)
+})
+
+test('get-filter-complex-functions', function (t) {
+  var start = new Through()
+  t.plan(8)
+  start
+    .pipe(png.set({ type: "zTXt", keyword: "cat", value: "cute" }))
+    .pipe(png.set({ type: "tEXt", keyword: "cat", value: "ugly" }))
+    .pipe(png.get('cat', [ 'zTXt' ], function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: "cat", value: "cute", type: "zTXt", compressed: true,
+                        compression_type: 0}, "should get expected result for set/get");
+    }))
+    .pipe(png.get('cat', [ 'tEXt' ], function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: "cat", value: "ugly", type: "tEXt"},
+                  "should only get one value for cat");
+    }))
+    .pipe(png.get('cat', [ 'tEXt', 'zTXt' ], function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data.keyword, 'cat', "should be found twice");
+    }))
+
+    
+  start.write(file)
+})
+
+
+}).call(this,require("buffer").Buffer)
+},{"../":1,"buffer":8,"fs":5,"stream":33,"tape":45}],59:[function(require,module,exports){
+(function (Buffer){
+var fs = require('fs')
+var png = require('../')
+var Through = require('stream').PassThrough
+var test = require('tape')
+
+var file = new Buffer('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/TQBcNTh/AAAAAXRSTlPM0jRW/QAAAApJREFUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII', 'base64')
+
+var start = new Through()
+
+test('multiple-get', function(t) {
+  t.plan(10)
+  start
+    .pipe(png.get(function(err, data) {
+      t.equals(err, null, "no error should be found")
+      t.equals(data, null, "no data should be found")
+    }))
+    .pipe(png.set({ type: 'tEXt', keyword: 'the', value: 'cat' }))
+    .pipe(png.get(function(err, data) {
+      t.equals(err, null, "no error should be found")
+      t.deepEqual(data, { type: 'tEXt', keyword: 'the', value: 'cat' },
+                  "single chunk returned")
+    }))
+    .pipe(png.set({ type: 'tEXt', keyword: 'sat', value: 'cat' }))
+    .pipe(png.set({ type: 'tEXt', keyword: 'a', value: 'cat' }))
+    .pipe(png.get(function(err, data) {
+      t.equals(err, null, "no error should be found")
+      t.equals(data.value, 'cat', "multiple chunks returned")
+    }))
+    
+  start.write(file)
+})
+
+
+}).call(this,require("buffer").Buffer)
+},{"../":1,"buffer":8,"fs":5,"stream":33,"tape":45}],60:[function(require,module,exports){
+(function (Buffer){
+var fs = require('fs')
+var png = require('../')
+var Through = require('stream').PassThrough
+var test = require('tape')
+
+var file = new Buffer('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/TQBcNTh/AAAAAXRSTlPM0jRW/QAAAApJREFUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII', 'base64')
+
 var start = new Through()
 
 test('regex-get', function(t) {
-  t.plan(14)
+  t.plan(16)
   start
-    .pipe(png.set('the', 'cat'))
-    .pipe(png.set('thhe', 'cat'))
-    .pipe(png.get(/hh/, function(key, value) {
-      t.same(key, 'thhe', "simple regex works for key")
-      t.same(value, 'cat', "simple regex works for value")
+    .pipe(png.set({ keyword: 'the', value: 'cat' }))
+    .pipe(png.set({ keyword: 'thhe', value: 'cat' }))
+    .pipe(png.get(/hh/, function(err, data) {
+      t.equals(err, null, "should find no error")
+      t.deepEquals(data, { type: 'iTXt', keyword: 'thhe', value: 'cat',
+                        compressed: false, compression_type: 0, language: "",
+                        translated: ""}, "should find value based on regexp")
     }))
-    .pipe(png.get(/THE/i, function(key, value) {
-      t.same(key, 'the', "regex with globals works for key")
-      t.same(value, 'cat', "regex with globals works for value")
+    .pipe(png.get(/THE/i, function(err, data) {
+      t.equals(err, null, "should find no error")
+      t.deepEquals(data, { type: 'iTXt', keyword: 'the', value: 'cat',
+                        compressed: false, compression_type: 0, language: "",
+                        translated: ""}, "regex with globals works for value")
     }))
-    .pipe(png.get(/^t[hH]+e/, function(key, value) {
-      t.ok(key, "regex works when option groups defined")
-      t.ok(value, "regex works when option groups defined")
+    .pipe(png.get(/^t[hH]+e/, function(err, data) {
+      t.equals(err, null, "should find no error")
+      t.ok(data.keyword, "regex works when option groups defined")
+      t.equal(data.value, "cat", "regex works when option groups defined")
     }))
-    .pipe(png.get(/THE/, function(key, value) {
-      t.deepEqual(key, null, "regex works when nothing to find")
-      t.deepEqual(value, null, "regex works when nothing to find")
+    .pipe(png.get(/THE/, function(err, data) {
+      t.equals(err, null, "should find no error")
+      t.deepEqual(data, null, "regex works when nothing to find")
     }))
-    .pipe(png.get('th*', function(key, value) {
-      t.deepEqual(key, null, "regex characters should not work in string.")
-      t.deepEqual(value, null, "regex characters should not work in string.")
+    .pipe(png.get('th*', function(err, data) {
+      t.equals(err, null, "should find no error")
+      t.deepEqual(data, null, "regex characters should not work in string.")
     }))
-    .pipe(png.get('th', function(key, value) {
-      t.deepEqual(key, null, "strings should not get partial matches.")
-      t.deepEqual(value, null, "strings should not get partial matches.")
+    .pipe(png.get('th', function(err, data) {
+      t.equals(err, null, "should find no error")
+      t.deepEqual(data, null, "strings should not get partial matches.")
     }))
 
     // TODO add tests for when string are passed in and converted to RegExp
   start.write(file)
 })
 
+}).call(this,require("buffer").Buffer)
+},{"../":1,"buffer":8,"fs":5,"stream":33,"tape":45}],61:[function(require,module,exports){
+(function (Buffer){
+var fs = require('fs')
+var png = require('../')
+var Through = require('stream').PassThrough
+var test = require('tape')
+
+var file = new Buffer('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/TQBcNTh/AAAAAXRSTlPM0jRW/QAAAApJREFUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII', 'base64')
+
+test('set-replace-functions', function (t) {
+  var start = new Through()
+  t.plan(14)
+  start
+    .pipe(png.set({ type: "tEXt", keyword: "cat", value: "cute" }))
+    .pipe(png.set({ type: "zTXt", keyword: "cat", value: "fluffy" }))
+    .pipe(png.set({ type: 'iTXt', keyword: 'cat', value: 'ugly' }))
+    .pipe(png.get('cat', [ "tEXt"], function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: "cat", value: "cute", type: "tEXt"},
+                  "should find only the tEXt chunk")
+    }))
+    .pipe(png.get('cat', [ "zTXt"], function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: "cat", value: "fluffy", type: "zTXt",
+                        compressed: true, compression_type: 0},
+                  "should find only the zTXt chunk");
+    }))
+    .pipe(png.get('cat', [ "iTXt" ], function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: "cat", value: "ugly", type: "iTXt",
+                        compressed: false, compression_type: 0, language: "",
+                        translated: ""}, "should only find one iTXt chunk");
+    }))
+    .pipe(png.get('cat', function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.equals(data.keyword, "cat", "should find all three");
+    }))
+    .pipe(png.set({ type: 'iTXt', keyword: 'cat', value: 'tabby' }, true))
+    .pipe(png.get('cat', function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: "cat", value: "tabby", type: "iTXt",
+                        compressed: false, compression_type: 0, language: "",
+                        translated: ""}, "should only get one value for cat");
+    }))
+    
+  start.write(file)
+})
 
 }).call(this,require("buffer").Buffer)
-},{"../":1,"buffer":8,"fs":5,"stream":33,"tape":45}]},{},[55,56,57,58]);
+},{"../":1,"buffer":8,"fs":5,"stream":33,"tape":45}]},{},[55,56,57,58,59,60,61]);
