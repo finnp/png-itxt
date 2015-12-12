@@ -190,11 +190,36 @@ fs.createReadStream('input.png')
 ```
 
 ## Browser Library
-A browser libarary, produced using browserify, is available in the dist folder. Both a normal and minified version is provided. To include it on your webpage simple copy the bundled js file to the appropriate location and add the following.
+As a test a browser libarary, produced using browserify in standalone mode, is available in the dist folder. Both a normal and minified version is provided. To include it on your webpage simple copy the bundled js file to the appropriate location and add the following. All exports from the library are then available on the pngitxt object.
 
 ```html
 <srcipt src='pngitxt-browser.min.js'></srcipt>
 ```
+
+The library exposes the same constats as for node and can be accessed in the same way. The library also exposes the save get and set functions but there are some differences in how they are called. The signature for the get function is shown below. All the parameters are the same apart from the first one which should provide the binary data of the image to check. Such a string can be obtained by using the FileReader.readAsBinaryString method.
+
+```js
+// Get input from somewhere
+pngitxt.get(input, keyword, filters, function (err, data) {
+            if (!err && data) {
+              console.log(JSON.stringify(data))
+            }
+          })
+```
+
+The set function has a similar input parameter and a data parameter as before. The last parameter is a callback that gives the base64 encoded version of the data. For example if you wanted to add a n iTXt block to a picture and then display it on a page you could write the following.
+
+```js
+// Get input from somewhere
+pngitxt.set(input, { keyword: "test", value: "value" },
+        function (result) {
+          var img = document.createElement('img');
+          img.src = "data:image/png;base64," + result;
+          document.body.appendChild(img);
+        })
+```
+
+An simple, rough and ready proof of concept is available of this functionality on a webpage is available in dist/example.html.
 
 ## Command Line Tool
 The command line tool, called `png-itxt` is provided in the bin folder and will be automatically linked from the node_modules/.bin folder if installed with npm. The two tools provided are as follows.
