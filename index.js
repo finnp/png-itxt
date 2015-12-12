@@ -223,6 +223,10 @@ function get(keyword, filters, callback) {
     }
   }
   
+  // Some sanity checks to make sure everything works.
+  keyword = keyword ? keyword : null
+  filters = filters ? filters : null
+  
   // If a keyword has been specified make sure it is a regular expression.
   if ((keyword !== null) && (!(keyword instanceof RegExp))) {
     keyword = new RegExp("^" + keyword.toString().replace(matchOperatorsRe, '\\$&') + "$")
