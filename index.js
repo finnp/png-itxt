@@ -188,33 +188,60 @@ function set(data, replaceAll) {
   return duplexer(decoder, encoder)
 }
 
-function get(keyword, callback) {
-  // Check if a keyword was given or if it was just a callback.
+function get(keyword, filters, callback) {
+  // Make sure that there is a callback function
   if (!callback) {
-    if (typeof(keyword) === 'function') {
+    if (typeof (filters) === 'function') {
+      callback = filters;
+      filters = null;
+    }
+    else if (filters === undefined && 
+             typeof(keyword) === 'function') {
       callback = keyword
       keyword = null
+      filters = null;
     }
     else {
       // throw exception if there is no callback.
-      throw new Error ("no callback provided");
+      throw new Error ("no callback or invalid arguments provided");
     }
   }
   
-  // If a keyword has been specified make sure it
-  // is a regular expression.
+  // If a keyword has been specified make sure it is a regular expression.
   if ((keyword !== null) && (!(keyword instanceof RegExp))) {
     keyword = new RegExp("^" + keyword.toString().replace(matchOperatorsRe, '\\$&') + "$")
   }
   
   var encoder = encode()
   var decoder = decode()
-  
+
+  var localHandlers = {}
+  if (filters) {
+    if (!Array.isArray(filters)) {
+      filters = [ filters ]
+    }
+    
+    var hasHandler = false;
+    for (var filter in filters) {
+      localHandlers[filter] = chunkDecoder[filer]
+      hasHandler = true;
+    }
+    
+    // If no handlers match just pass data through
+    // without looking at it.
+    if (!hasHandler) {
+      return duplexer(decoder, encoder);
+    }
+  }
+  else {
+    localHandlers = chunkDecoder
+  }
+    
   decoder.pipe(through.obj(function (chunk, enc, cb) {
     this.push(chunk)
     
     // Sees if there is a handler for the current type.
-    var handler = chunkDecoders[chunk.type]
+    var handler = localHandlers[chunk.type]
     if (handler) {
       // If there is get the keyword and it is one we are
       // looking for then pass it to the handler.
