@@ -115,7 +115,7 @@ const chunkEncoder = {
     buffer.write(value, currentPos)
     return buffer
   },
-  "tEXt": function (keyword, data, callback) {
+  "tEXt": function (data) {
     var keylen = Math.min(79, Buffer.byteLength(data.keyword))
     // 3 is for all the null characters that seperate the fields.
     var buffer = new Buffer(keylen + 1 + datalen)
@@ -273,4 +273,12 @@ function getFieldEnd(data) {
 
 exports.set = set
 exports.get = get
-exports.createChunk = exports.chunk = createChunk
+exports.createChunk = exports.chunk = function (data) {
+  var createChunk = chunkEncoder[data.type]
+  if (createChunk === undefined) {
+    // Can't handle the chunk
+    return null
+  }
+  
+  return createChunk(data)
+}
