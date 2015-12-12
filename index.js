@@ -156,8 +156,7 @@ function set(data, replaceAll) {
   
   var createChunk = chunkEncoder[data.type]
   if (createChunk === undefined) {
-    // Can't handle the chunk so going to ignore it.
-    return duplexer(decoder, encoder)  
+    throw new Error("invalid chunk type specified") 
   }
   
   decoder.pipe(through.obj(function (chunk, enc, cb) {
@@ -228,6 +227,7 @@ function get(keyword, filters, callback) {
     // If no handlers match just pass data through
     // without looking at it.
     if (!hasHandler) {
+      callback(new Error("invalid filter specified"), null)
       return duplexer(decoder, encoder);
     }
   }
