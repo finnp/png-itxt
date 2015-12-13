@@ -70,7 +70,7 @@ fs.createReadStream('input.png')
   .pipe(fs.createWriteStream('output.png'))
 ```
 
-The set function will overwrite any chunk of the same type and the same keyword. In the previous example is there were already iTXt chunks with the keyword pizza (the spec allows for more than one chunk with the same keyword) then the values stored in those chunks would be lost.
+The set function will overwrite all the chunks of the same type and the keyword. In the previous example is there were already iTXt chunks with the keyword pizza (the spec allows for more than one chunk with the same keyword) then the values stored in those chunks would be lost.
 
 It is also possible to have different types of textual chunk with the same keyword. An option is provided to allow you to replace all textual chunks with the same keyword regardless of their type. To do this specify the value `true` as the second parameter to the function.
 
@@ -83,7 +83,7 @@ fs.createReadStream('input.png')
 In this case if there were already an iTXt and tEXt chunk with the keyword pizza then they would both be replaced by a single iTXt chunk with the new value.
 
 ### Exceptions
-An exception will be thrown if you pass in an unknow chunk type.
+An exception will be thrown if you pass in an unknown chunk type.
 
 ```js
 // This will cause an exception to be thrown.
