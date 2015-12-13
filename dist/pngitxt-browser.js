@@ -18,7 +18,7 @@ module.exports.set = function (input, data, callback) {
 
 
 module.exports.get = function (input, keyword, filter, callback) {
-  pngitxt.get(keyword, filter, callback).write(new Buffer (input, 'binary'))
+  pngitxt.get(keyword, filter, callback).end(new Buffer (input, 'binary'))
 }
 
 module.exports.iTXt = pngitxt.iTXt
