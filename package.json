@@ -5,7 +5,6 @@
   "main": "index.js",
   "scripts": {
     "test": "tape test/*.test.js && phantomjs test/browser-test/test_webpage.js",
-    "prepublish": "npm run dist",
     "pretest": "browserify test/*.test.js -o test/browser-test/test_bundle.js",
     "dist": "browserify --s pngitxt -o dist/pngitxt-browser.js browser.js; uglifyjs -m -o dist/pngitxt-browser.min.js dist/pngitxt-browser.js"
   },
