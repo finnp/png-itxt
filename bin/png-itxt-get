@@ -1,0 +1,74 @@
+#!/usr/bin/env node
+
+var fs = require('fs')
+var program = require('commander')
+var pngitxt = require('..')
+
+const matchOperatorsRe = /[|\\{}()[\]^$+*?.]/g;
+
+program
+  .version('1.3.0')
+  .usage('[options] <file.png>')
+  .description('Tool for getting textual information from PNG images')
+  .option('-k, --keyword <keyword>', 'keyword to serach for')
+  .option('-r, --regexp <expression>', 'regular expression to search by', RegExp)
+  .option('-i, --ignorecase', 'makes the search case insensitive')
+  .option('-s, --stdin', 'reads the image data from standard input')
+  .option('-f, --filter <chunktypes>', 'comma seperated list of chunk types to return')
+  .option('-o, --output <file>', 'write results to a file')
+  .parse(process.argv)
+
+// Check a single file name was provided.
+if ((program.args.length != 1) && (!program.stdin)) {
+  console.error("ERROR: you must specify a valid input file")
+  program.help()
+}
+
+var searchTerm = null
+// Check they haven't specified both arguement and select the one to use.
+if (program.keyword !== undefined) {
+  searchTerm = new RegExp("^" + program.keyword.replace(matchOperatorsRe, '\\$&') + "$")
+} 
+
+var searchFilter = null
+if (program.filter) {
+  searchFilter = program.filter.split(',')
+}
+
+if (program.regexp !== undefined) {
+  if (searchTerm !== null) {
+    console.error("ERROR: Cannot specify both a keyword and regular expression")
+    program.help()
+  }
+  
+  searchTerm = program.regexp
+}
+
+if (program.ignorecase) {
+  searchTerm = new RegExp(searchTerm.source, "i")
+}
+
+function printError (err) {
+  console.error("ERROR:", err.message)
+  process.exit(1)
+}
+
+var writeStream = program.output ? fs.createWriteStream(program.output) : process.stdout
+var readStream = program.stdin ? process.stdin : fs.createReadStream(program.args[0])
+writeStream.on('error', printError)
+readStream.on('error', printError)
+readStream.on('end', function() {
+  if (program.output)
+    writeStream.end()
+})
+
+readStream.pipe(pngitxt.get(searchTerm, searchFilter, function (err, data) {
+    if (err) {
+      writeStream.write({ type: "error", message: "err.toString()" })
+    }
+    else { 
+      if (data !== null) {
+        writeStream.write(JSON.stringify(data) + "\n")
+      }
+    }
+}))

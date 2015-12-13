@@ -1,0 +1,247 @@
+<html>
+  <head>
+    <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha256-KXn5puMvxCw+dAYznun+drMdG1IFl3agK0p/pqT9KAo= sha512-2e8qq0ETcfWRI4HJBzQiA3UoyFk6tbNyG+qSaIBZLyW9Xf3sWZHN/lxe9fTh1U45DpPf07yj94KsUHHWe4Yk1A==" crossorigin="anonymous"></script>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-7s5uDGW3AHqw6xtJmNNtr+OBRJUlgkNJEo78P4b0yRw= sha512-nNo+yCHEyn0smMxSswnf/OnX6/KwJuZTlNZBjauKhTK0c+zT+q5JOCx0UFhXQ6rJR9jg6Es8gPuD2uZcYDLqSw==" crossorigin="anonymous">
+    <script src="pngitxt-browser.js"></script>
+  </head>
+  <body class="container">
+    <div class="page-header">
+      <h1>png-itxt Browser Example</h1>
+        <p>This page demonstrates the use of the png-itxt library on a webpage.
+            To try it out for yourself by dragging an image onto one of the boxes below.
+            To inspect the chunks added to the image on the right either save it or 
+            drag it into the box on the left.
+        </p>
+    </div>
+    <div class="row fluid-container">
+      <div class="col-sm-6 col-xs-12">
+        <div class="row">
+          <div class="col-xs-12">
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <h3 class="panel-title">Drop an image to inspect here</h3>
+              </div>
+              <div id="getZone" class="panel-body" style="height: 250px;">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-xs-12">
+            <table id='resultsTable' class='table table-striped"' style="display:none;">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Keyword</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody id='getResults'>
+
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xs-12">
+        <div class="row">
+          <div class="col-xs-12">
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <h3 class="panel-title">Drop an image to here to add a test iTXt chunk</h3>
+              </div>
+              <div id="setZone" class="panel-body" style="height: 250px;">
+
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-xs-12">
+            <form class="form-horizontal">
+            <div class="form-group">
+              <label for="keyword" class="control-label col-sm-2">Keyword</label>
+              <div class="col-sm-10">
+                <input type="text" class="form-control" id="keyword" placeholder="keyword">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="value" class="control-label col-sm-2">Value</label>
+              <div class="col-sm-10">
+                <input type="test" class="form-control" id="value" placeholder="value">
+              </div>
+            </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="errModal" tabindex="-1"
+         role="dialog" aria-labelledby="myModalLabel">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+            <h4 class="modal-title" id="errTitle">Modal title</h4>
+          </div>
+          <div class="modal-body" id="errMessage">
+            ...
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default"
+                    data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>    
+
+<script>
+    function copyEffect (e) {
+        e.stopPropagation();
+        e.preventDefault();
+        e.originalEvent.dataTransfer.dropEffect = 'copy';      
+    }
+    var setZone = $('#setZone');
+    var getZone = $('#getZone');
+    setZone.on('dragover', copyEffect);
+    getZone.on('dragover', copyEffect);
+  
+    function createImageTag (data) {
+      return $("<img>", {
+        src: "data:image/png;base64," + btoa(data),
+        style: "max-height:100%; min-width: 75px;",
+        class: 'img-responsive center-block img-thumbnail'
+      })
+    }
+  
+    function displayError (title, message) {
+      $('#errTitle').html(title)
+        $('#errMessage').html("<p>" + message + "</p>")
+        $('#errModal').modal()
+    }
+  
+    function processGet (imageData) {
+      var resultsTable = $('#resultsTable')
+      var getResults = $('#getResults')
+
+      resultsTable.hide()
+      getResults.html("")
+
+      var img = createImageTag(imageData)
+      getZone.html(img)
+
+      pngitxt.get(imageData, function (err, data) {
+        if (!err && data) {
+          var row = $('<tr>')
+          row.html("<td>" + data.type + "</td>"
+              + "<td>" + data.keyword + "</td>"
+              + "<td>" + data.value + '</td>')
+          getResults.append(row)
+          resultsTable.show()
+        }
+      })      
+    }
+
+    getZone.on('drop', function(e) {
+      e.stopPropagation();
+      e.preventDefault();
+
+      // Only dealing with the first file.
+      if (e.originalEvent.dataTransfer.files.length > 0) {
+        var file = e.originalEvent.dataTransfer.files[0]
+        
+        // Check its a png
+        if (file.type.match(/image.png/)) {    
+          var reader = new FileReader();
+          reader.onload = function(e2) { // finished reading file data.
+            processGet(e2.target.result)
+          }
+          reader.readAsBinaryString(file); // start reading the file data.    
+        }
+        else {
+          displayError("Unrecognised file type",
+                  "This web page can only process png image data.")
+          return;
+        }
+
+      }
+      else if (e.originalEvent.dataTransfer.items.length > 0) {
+        e.originalEvent.dataTransfer.items[0].getAsString(function (data) {
+          if (data.match(/^data:image.png/)) {
+            processGet (atob(data.split(',')[1]))
+          }
+          else {
+            displayError("Unrecognised element data",
+                    "This web page can only process png image data "
+                    + "from an img take where the data is contained "
+                    + "in the src attribute.")
+            return;
+          }
+        })
+      }
+    });
+
+    setZone.on ('drop', function(e) {
+      e.stopPropagation();
+      e.preventDefault();
+      
+      var keyword = $('#keyword').val()
+      var value = $('#value').val()
+      
+      if (!keyword || keyword.length == 0
+         || !value || value.length == 0) {
+        displayError("Missing keyword or value",
+                "You cannot set a chunk on an image until "
+                + "you have entered a keyword and value into the form at "
+                + "the bottom of the page")
+        return;
+      }
+      
+      // Only dealing with the first file.
+      if (e.originalEvent.dataTransfer.files.length > 0) {
+        var file = e.originalEvent.dataTransfer.files[0]
+        
+        // Check its a png
+        if (file.type.match(/image.png/)) {
+          var reader = new FileReader();
+          reader.onloadend = function(e2) { // finished reading file data.
+            pngitxt.set(e2.target.result, { keyword: keyword, value: value },
+                       function (result) {
+              var img = createImageTag(result)
+              setZone.html(img);
+            })
+          }
+          reader.readAsBinaryString(file); // start reading the file data.    
+        }
+        else {
+          displayError("Unrecognised file type",
+                  "This web page can only process png image data.")
+          return;
+        }
+      }
+      else if (e.originalEvent.dataTransfer.items.length > 0) {
+        e.originalEvent.dataTransfer.items[0].getAsString(function (data) {
+          if (data.match(/^data:image.png/)) {
+            pngitxt.set(atob(data.split(',')[1]), { keyword: keyword, value: value },
+                       function (result) {
+              var img = createImageTag(result)
+              setZone.html(img);
+            })
+          }
+          else {
+            displayError("Unrecognised element data",
+                    "This web page can only process png image data "
+                    + "from an img take where the data is contained "
+                    + "in the src attribute.")
+            return;
+          }
+        })
+      } 
+    });
+</script>
+  </body>
+</html>

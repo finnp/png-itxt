@@ -4,18 +4,27 @@
   "description": "Adding and reading png iTXt data with streams",
   "main": "index.js",
   "scripts": {
-    "test": "tape test/*.test.js",
-    "browserify": "browserify test/*.test.js > test/test_bundle.js"
+    "test": "tape test/*.test.js && phantomjs test/browser-test/test_webpage.js",
+    "prepublish": "npm run dist",
+    "pretest": "browserify test/*.test.js -o test/browser-test/test_bundle.js",
+    "dist": "browserify --s pngitxt -o dist/pngitxt-browser.js browser.js; uglifyjs -m -o dist/pngitxt-browser.min.js dist/pngitxt-browser.js"
   },
   "author": "Finn Pauls",
   "license": "MIT",
+  "bin": {
+    "png-itxt": "./bin/png-itxt"
+  },
   "dependencies": {
+    "commander": "^2.9.0",
     "duplexer": "^0.1.1",
+    "pako": "^0.2.8",
     "png-chunk-stream": "^1.0.1",
     "through2": "^0.6.1"
   },
   "devDependencies": {
-    "tape": "^3.0.0"
+    "browserify": "^12.0.1",
+    "tape": "^3.0.0",
+    "uglify-js": "^2.6.1"
   },
   "testling": {
     "files": "test/*.test.js",
