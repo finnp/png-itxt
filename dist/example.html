@@ -6,66 +6,103 @@
     <script src="pngitxt-browser.js"></script>
   </head>
   <body>
-    <div id="dropZone" style="width: 100px; height: 100px; background-color: red"></div>
+    <div class="page-header">
+      <h1>png-itxt Browser Example</h1>
+        <p>This page demonstrates the use of the png-itxt library on a webpage.
+            To try it out for yourself by dragging an image onto one of the boxes below.
+            Remember you will have to save the editing image to see the new field.
+        </p>
+    </div>
+    <div class="row fluid-container">
+      <div class="col-sm-6 col-xs-12">
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h3 class="panel-title">Drop an image to inspect here</h3>
+          </div>
+          <div id="getZone" class="panel-body" style="height: 150px;">
+          </div>
+          <table id='getresult' class='table'>
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Keyword</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody id='getResults'>
+              
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xs-12">
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h3 class="panel-title">Drop an image to here to add a test iTXt chunk</h3>
+          </div>
+          <div id="setZone" class="panel-body" style="height: 300px;">
+            
+          </div>
+        </div>
+      </div>
+    </div>
+
 <script>
-    var dropZone = document.getElementById('dropZone');
-
-    // Optional.   Show the copy icon when dragging over.  Seems to only work for chrome.
-    dropZone.addEventListener('dragover', function(e) {
+    function copyEffect (e) {
         e.stopPropagation();
         e.preventDefault();
-        e.dataTransfer.dropEffect = 'copy';
-    });
+        e.dataTransfer.dropEffect = 'copy';      
+    }
+    var setZone = document.getElementById('setZone');
+    var getZone = document.getElementById('getZone');
+    getZone.addEventListener('dragover', copyEffect);
+    setZone.addEventListener('dragover', copyEffect);
 
-    // Get file data on drop
-    dropZone.addEventListener('drop', function(e) {
-        e.stopPropagation();
-        e.preventDefault();
-        var files = e.dataTransfer.files; // Array of all files
-        for (var i=0, file; file=files[i]; i++) {
-            if (file.type.match(/image.png/)) {
-                var reader = new FileReader();
-                reader.onload = function(e2) { // finished reading file data.
-                    pngitxt.get(e2.target.result, function (err, data) {
-                      if (!err && data)
-                        console.log(JSON.stringify(data))
-                    })
-                }
-                reader.readAsBinaryString(file); // start reading the file data.    
-            }
+    getZone.addEventListener('drop', function(e) {
+      e.stopPropagation();
+      e.preventDefault();
+      
+      var getResults = document.getElementById('getResults')
+      getResults.innerHTML = ""
+      var files = e.dataTransfer.files;
+      for (var i=0, file; file=files[i]; i++) {
+        if (file.type.match(/image.png/)) {
+          var reader = new FileReader();
+          reader.onload = function(e2) { // finished reading file data.
+            pngitxt.get(e2.target.result, function (err, data) {
+              if (!err && data)
+                var row = document.createElement('tr')
+                row.innerHTML = "<td>" + data.type + "</td>"
+                    + "<td>" + data.keyword + "</td>"
+                    + "<td>" + data.value + '</td>'
+                getResults.appendChild(row)
+            })
+          }
+          reader.readAsBinaryString(file); // start reading the file data.    
         }
-    });
-</script>
-    <div id="dropZone2" style="width: 100px; height: 100px; background-color: yellow"></div>
-<script>
-    var dropZone2 = document.getElementById('dropZone2');
-
-    // Optional.   Show the copy icon when dragging over.  Seems to only work for chrome.
-    dropZone2.addEventListener('dragover', function(e) {
-        e.stopPropagation();
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'copy';
+      }
     });
 
-    // Get file data on drop
-    dropZone2.addEventListener('drop', function(e) {
-        e.stopPropagation();
-        e.preventDefault();
-        var files = e.dataTransfer.files; // Array of all files
-        for (var i=0, file; file=files[i]; i++) {
-            if (file.type.match(/image.png/)) {
-                var reader = new FileReader();
-                reader.onloadend = function(e2) { // finished reading file data.
-                    pngitxt.set(e2.target.result, { keyword: "test", value: "value"},
-                               function (result) {
-                      var img = document.createElement('img');
-                      img.src = "data:image/png;base64," + result;
-                      document.body.appendChild(img);
-                    })
-                }
-                reader.readAsBinaryString(file); // start reading the file data.    
-            }
+    setZone.addEventListener('drop', function(e) {
+      e.stopPropagation();
+      e.preventDefault();
+      var files = e.dataTransfer.files; // Array of all files
+      for (var i=0, file; file=files[i]; i++) {
+        if (file.type.match(/image.png/)) {
+          var reader = new FileReader();
+          reader.onloadend = function(e2) { // finished reading file data.
+            pngitxt.set(e2.target.result, { keyword: "test", value: "value"},
+                       function (result) {
+              var img = document.createElement('img');
+              img.src = "data:image/png;base64," + result;
+              
+              setZone.innerHTML = ""
+              setZone.appendChild(img);
+            })
+          }
+          reader.readAsBinaryString(file); // start reading the file data.    
         }
+      }
     });
 </script>
   </body>
