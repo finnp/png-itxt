@@ -286,39 +286,13 @@ function getFieldEnd(data) {
   return i
 }
 
-// Wrapper function for those wanting to use
-// the old function interface.
-function getitxt (keyword, callback) {
-  return get(keyword, [ iTXt ], function(err, data) {
-    if (err) {
-      // Not sure what to do here! Will return
-      // keyword if possible otherwise just null.
-      if (data) {
-        callback(data.keyword, null)
-      }
-      else {
-        callback(null, null)
-      }
-    }
-    else if (data === null) {
-      callback(null, null)
-    }
-    else {
-      callback(data.keyword, data.value)
-    }
-  });
-}
-
-// Wrapper function for those wanting to use
-// the old function interface.
-function setitxt (keyword, value) {
-  return set({ type: iTXt, keyword: keyword, value: value })
-}
+// import compatability functions
+var old = require('./lib/compatability.js')
+exports.getitxt = old.getitxt
+exports.setitxt = old.setitxt
 
 exports.set = set
 exports.get = get
-exports.getitxt = getitxt
-exports.setitxt = setitxt
 exports.createChunk = exports.chunk = function (data) {
   var createChunk = chunkEncoder[data.type]
   if (createChunk === undefined) {
