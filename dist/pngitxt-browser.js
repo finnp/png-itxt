@@ -11,7 +11,7 @@ module.exports.set = function (input, data, callback) {
   resultStream.on('data', function(datain) { result.push(datain); })
   resultStream.on('end', function() {
     result = Buffer.concat(result)
-    callback(result.toString('base64'))
+    callback(result.toString('binary'))
   })
   dataStream.end(new Buffer (input, 'binary'))
 }

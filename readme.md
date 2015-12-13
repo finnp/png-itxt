@@ -207,14 +207,14 @@ pngitxt.get(input, keyword, filters, function (err, data) {
           })
 ```
 
-The set function has a similar input parameter and a data parameter as before. The last parameter is a callback that gives the base64 encoded version of the data. For example if you wanted to add an iTXt block to a picture and then display the picture on a page you could write the following.
+The set function has a similar input parameter and a data parameter as before. The last parameter is a callback that gives a binary string containing the altered image data. If, for example, you wanted to add an iTXt block to a picture and then display the picture on a page you convert the data to a base 64 encoding to display it on the page as follows.
 
 ```js
 // Get input from somewhere
 pngitxt.set(input, { keyword: "test", value: "value" },
         function (result) {
           var img = document.createElement('img');
-          img.src = "data:image/png;base64," + result;
+          img.src = "data:image/png;base64," + btoa(result);
           document.body.appendChild(img);
         })
 ```
