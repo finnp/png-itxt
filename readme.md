@@ -24,6 +24,12 @@ To use the tool in your node programs you must first require the module. If inst
 var pngitxt = require('png-itxt')
 ```
 
+## Backward Compatability
+The new functions do not take the same parameters as the version 1.3.0 or earlier. If you upgrade to this version of the library then you will need to change your code. To make this process easier two wrapper methods have been provided called `getitxt` and `setitxt`. These methods expose the same interface as version 1.3.0 so to get up and running with the new library simple search and replace the following (assuming you have required the library as above).
+
+* **Search for**: `pngitxt.get`, **Replace with**: `pngitxt.getitxt`
+* **Search for**: `pngitxt.set`, **Replace with**: `pngitxt.setitxt`
+
 ## Constants
 The module exports constants for the types of the textual chunks. These can be accessed as follows.
 
