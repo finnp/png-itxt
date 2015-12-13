@@ -191,7 +191,9 @@ function set(data, replaceAll) {
   decoder.pipe(through.obj(function (chunk, enc, cb) {
     // Add just before end if not found.
     if(chunk.type === 'IEND' && !this.found) {
-        this.push({ 'type': data.type, 'data': createChunk(data) })
+        if (data.value !== null) {
+          this.push({ 'type': data.type, 'data': createChunk(data) })
+        }
         this.push(chunk)
         return cb()
     }
@@ -201,7 +203,9 @@ function set(data, replaceAll) {
       var pos = getFieldEnd(chunk.data)
       if (chunk.data.slice(0, pos).toString() === data.keyword) {
         if (!this.found) {
-          this.push({ 'type': data.type, 'data': createChunk(data) })
+          if (data.value !== null) {
+            this.push({ 'type': data.type, 'data': createChunk(data) })
+          }
           this.found = true;
         }
         // If it is the same keyword and it has been replaced ignore chunk.
@@ -338,6 +342,13 @@ var png = require('..')
 // Wrapper function for those wanting to use
 // the old function interface.
 function getitxt (keyword, callback) {
+  if (keyword === null) {
+    // to stop find all behaviour from kicking
+    // in - should find nothing as an empty
+    // keyword is invalid.
+    keyword = '';
+  }
+  
   if (!callback) {
     if (typeof (keyword) == 'function') {
       callback = keyword

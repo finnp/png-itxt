@@ -88,6 +88,15 @@ fs.createReadStream('input.png')
 
 In this case if there were already an iTXt and tEXt chunk with the keyword pizza then they would both be replaced by a single iTXt chunk with the new value.
 
+### Using set to Remove Chunks
+In the special case where you pass `null` as the value to be stored in the chunk all chunks that would normally have been replaced will simply be removed. For example the following example would result in all the textual chunks with the keyword pizza being removed from the image.
+
+```js
+fs.createReadStream('input.png')
+  .pipe(pngitxt.set( { keyword: 'pizza', value: null }, true ))
+  .pipe(fs.createWriteStream('output.png'))
+```
+
 ### Exceptions
 An exception will be thrown if you pass in an unknown chunk type.
 
