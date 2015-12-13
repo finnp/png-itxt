@@ -25,7 +25,7 @@ var pngitxt = require('png-itxt')
 ```
 
 ## Backward Compatability
-The new functions do not take the same parameters as the version 1.3.0 or earlier. If you upgrade to this version of the library then you will need to change your code. To make this process easier two wrapper methods have been provided called `getitxt` and `setitxt`. These methods expose the same interface as version 1.3.0 so to get up and running with the new library simple search and replace the following (assuming you have required the library as above).
+The new functions do not take the same parameters as the version 1.3.0 or earlier. If you upgrade to this version of the library then you will need to change your code. To make this process easier two wrapper methods have been provided called `getitxt` and `setitxt`. These methods expose the same interface as version 1.3.0 so to get up and running with the new library simply search and replace the following (assuming you have required the library as above).
 
 * **Search for**: `pngitxt.get`, **Replace with**: `pngitxt.getitxt`
 * **Search for**: `pngitxt.set`, **Replace with**: `pngitxt.setitxt`
@@ -40,7 +40,7 @@ The module exports constants for the types of the textual chunks. These can be a
 ```
 
 ## Data Format
-Chunk data should be provided and will be returned as an object as shown below. Not that this is the full declaration for a `iTXt` chunk as will be produced by the program. However not all fields are required when passing information to the program. Additionally some of these fields are not relevant to `zTXt` and `tEXt` chunks.
+Chunk data should be provided and will be returned as an object as shown below. Note that this is the full declaration for a `iTXt` chunk as will be produced by the program. However not all fields are required when passing information to the program. Additionally some of these fields are not relevant to `zTXt` and `tEXt` chunks.
 
 ```js
 {
@@ -63,7 +63,7 @@ See the table below for details of which fields are relevent to each chunk and w
 |**lanuage**          | iTXt       | *empty string*
 |**translated**       | iTXt       | *empty string*
 |**compressed**       | iTXt, zTXt | false apart from zTXt chunks
-|**compression_type** | iTXt, zTXt | 0 (only vald value)
+|**compression_type** | iTXt, zTXt | 0 (only valid value)
 
 
 ## set - Writing iTXt data
@@ -86,10 +86,10 @@ fs.createReadStream('input.png')
   .pipe(fs.createWriteStream('output.png'))
 ```
 
-In this case if there were already an iTXt and tEXt chunk with the keyword pizza then they would both be replaced by a single iTXt chunk with the new value.
+In this case if there were already any iTXt, zTXT or tEXt chunks with the keyword pizza then they would both be replaced by a single iTXt chunk with the new value.
 
 ### Using set to Remove Chunks
-In the special case where you pass `null` as the value to be stored in the chunk all chunks that would normally have been replaced will simply be removed. For example the following example would result in all the textual chunks with the keyword pizza being removed from the image.
+In the special case where you pass `null` as the value to be stored then all chunks that would normally have been replaced will simply be removed. For example the following example would result in all the textual chunks with the keyword pizza being removed from the image.
 
 ```js
 fs.createReadStream('input.png')
@@ -110,19 +110,21 @@ fs.createReadStream('input.png')
 
 
 ## get - Reading iTXt data
-Retrieval of information is achieved using the get function and callbacks. The callback will be invoked each time a matching chunk is found. It cannot be assumed that callback will only be called once for a particular keyword. You are guaranteed that your callback will be called at least once even if no matching chunks are found - in that case a null is provided instead of data.
+Retrieval of information is achieved using the get function and callbacks. The callback will be invoked each time a matching chunk is found. It cannot be assumed that callback will only be called once for a particular keyword. You are guaranteed that your callback will be called at least once even if no matching chunks are found - in that case a null is provided instead of data. By default the get function will return any textual chunks that match the criteria provided. If you just want one type of chunk (e.g iTXt) then see the section of filters.
 
 ### Callback Signature
-The callback to all the get methods is given two parameters. The first is used to indicate whether or not an error was encountered. The second returns the data found in the format outlined above. In the case of an error data may not be null. For example if the error was caused when trying to inflate a compressed value then all the other information collected about the chunk will be returned with the error.
+The callback to the get function is given two parameters. The first is used to indicate whether or not an error was encountered. The second returns the data found in the format outlined above. In the case of an error the data provided may not be null. For example if the error was caused when trying to inflate a compressed value then all the other information collected about the chunk will be returned with the error.
 
 ```js
 function pngtxtCallback (err, data) {
-    console.log(data.keyword, ":", data.value)
+    if (!err) {
+        console.log(data.keyword, ":", data.value)
+    }
 }
 ```
 
 ### Finding a specific keyword
-To find the text associated with a specific keyword you must call get and provide both the keyword and a callback. Passing `null` as the keyword will cause all textual chunks to be passed to the callback. If the keyword is not found the callback will be called with `null` for both parameters.
+To find the text associated with a specific keyword you must call get and provide both the keyword and a callback. Passing `null` as the keyword will cause all textual chunks to be passed to the callback. If the keyword is not found the callback will be called with `null` for both parameters. Note as mentioned previously this example will return any textual chunk that has the specified keyword. If you just want a specific type of chunk then see the section on filters below.
 
 ```js
 fs.createReadStream('input.png')
@@ -213,7 +215,7 @@ As a test a browser libarary, produced using browserify in standalone mode, is a
 <srcipt src='pngitxt-browser.min.js'></srcipt>
 ```
 
-The library exposes the same constats as for node and can be accessed in the same way. The library also exposes the save get and set functions but there are some differences in how they are called. The signature for the get function is shown below. All the parameters are the same apart from the first one which should provide the binary data of the image to check. Such a string can be obtained by using the FileReader.readAsBinaryString method.
+The library exposes the same constats as for node and can be accessed in the same way. The library also exposes the same get and set functions but there are some differences in how they are called. The signature for the get function is shown below. All the parameters are the same apart from the first one which should provide the binary data of the image to check. Such a string can be obtained in various way including using the FileReader.readAsBinaryString method.
 
 ```js
 // Get input from somewhere
@@ -224,7 +226,7 @@ pngitxt.get(input, keyword, filters, function (err, data) {
           })
 ```
 
-The set function has a similar input parameter and a data parameter as before. The last parameter is a callback that gives a binary string containing the altered image data. If, for example, you wanted to add an iTXt block to a picture and then display the picture on a page you convert the data to a base 64 encoding to display it on the page as follows.
+The set function has a similar input parameter and a data parameter as before. The last parameter is a callback that gives a binary string containing the altered image data. If, for example, you wanted to add an iTXt block to a picture and then display the picture on a page you can convert the data to a base64 encoding to display it on the page as follows.
 
 ```js
 // Get input from somewhere
@@ -236,20 +238,22 @@ pngitxt.set(input, { keyword: "test", value: "value" },
         })
 ```
 
-A simple, rough and ready proof of concept of this functionality is available in the webpage at dist/example.html.
+A simple, rough and ready proof of concept of this functionality is available as a webpage at dist/example.html. This page will allow you to drag and drop images to either inspect their data or add additional data.
 
 ## Command Line Tool
-The command line tool, called `png-itxt` is provided in the bin folder and will be automatically linked from the node_modules/.bin folder if installed with npm. The two tools provided are as follows.
+The command line tool, called `png-itxt` is provided in the bin folder and will be automatically linked from the node_modules/.bin folder if installed with npm. The two commands it supports are as follows.
 
 * ```png-itxt get```
 * ```png-itxt set```
 
 ### png-itxt get
-This command allows you to seach an image for textual chunks of any type and will output the result in JSON format. For example the following command will search the input.png file for a iTXT or zTXt  chunk that has the keyword pizza and then output the results to standard output.
+This command allows you to seach an image for textual chunks of any type and will output the result in JSON format. For example the following command will search the input.png file for a iTXT or zTXt chunk that has the keyword pizza and then output the results to standard output.
 
 ```
 png-itxt get -k pizza -f iTXt,zTXt input.png
 ```
+
+A complete list of the options for the get command are shown below.
 
 ```
   Usage: png-itxt-get [options] <file.png>
@@ -269,11 +273,13 @@ png-itxt get -k pizza -f iTXt,zTXt input.png
 ```
 
 ### png-itxt set
-This command allows you to add iTXt chunk to an image. For example the following command will add a chunk with keyword pizza and the value delicious to an image form the file input.png and then save it to output.png. A full list of all the avilable options is at the end of this section.
+This command allows you to add iTXt chunk to an image. For example the following command will add a chunk with keyword pizza and the value delicious to an image from the file input.png and then save it to output.png. The command can also be used to read data from stdin and output the result to stdout so that you can pipe the information between commands. Note that this tool will only add iTXt chunks.
 
 ```
 png-itxt set -k pizza -d delicious -o output.png input.png
 ```
+
+A full list of all the avilable options available for use with the set command are shown below.
 
 ```
   Usage: png-itxt-set [options] <fileIn.png>
