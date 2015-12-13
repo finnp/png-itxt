@@ -160,12 +160,6 @@ function set(data, replaceAll) {
   }
   
   decoder.pipe(through.obj(function (chunk, enc, cb) {
-    // Not sure whether to leave this here or not
-    if(this.found && (!replaceAll)) {
-      this.push(chunk)
-      return cb()
-    }
-    
     // Add just before end if not found.
     if(chunk.type === 'IEND' && !this.found) {
         this.push({ 'type': data.type, 'data': createChunk(data) })
@@ -173,7 +167,7 @@ function set(data, replaceAll) {
         return cb()
     }
     
-    if(chunk.type == data.type || (replaceAll !== undefined
+    if(chunk.type == data.type || (replaceAll !== undefined && replaceAll
       && (chunk.type == iTXt || chunk.type == zTXt || chunk.type == tEXt))) {
       var pos = getFieldEnd(chunk.data)
       if (chunk.data.slice(0, pos).toString() === data.keyword) {
@@ -181,7 +175,7 @@ function set(data, replaceAll) {
           this.push({ 'type': data.type, 'data': createChunk(data) })
           this.found = true;
         }
-        // If it is the same keyword and it has been replace ignore chunk.
+        // If it is the same keyword and it has been replaced ignore chunk.
       }
       else {
         // Push all chunks where keyword not matched.
