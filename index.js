@@ -290,6 +290,12 @@ function getFieldEnd(data) {
   return i
 }
 
+// import wrapper functions
+var wrapper = require('./lib/wrapper.js')
+exports.getitxt = wrapper.getitxt
+exports.getztxt = wrapper.getztxt
+exports.gettext = wrapper.gettext
+
 // import compatability functions
 var old = require('./lib/compatability.js')
 exports.getv1 = old.getv1
