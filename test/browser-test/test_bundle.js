@@ -294,8 +294,8 @@ function getFieldEnd(data) {
 
 // import compatability functions
 var old = require('./lib/compatability.js')
-exports.getitxt = old.getitxt
-exports.setitxt = old.setitxt
+exports.getv1 = old.getv1
+exports.setv1 = old.setv1
 
 exports.set = set
 exports.get = get
@@ -314,7 +314,7 @@ var png = require('..')
 
 // Wrapper function for those wanting to use
 // the old function interface.
-function getitxt (keyword, callback) {
+function getv1 (keyword, callback) {
   if (keyword === null) {
     // to stop find all behaviour from kicking
     // in - should find nothing as an empty
@@ -359,12 +359,12 @@ function getitxt (keyword, callback) {
 
 // Wrapper function for those wanting to use
 // the old function interface.
-function setitxt (keyword, value) {
+function setv1 (keyword, value) {
   return png.set({ type: png.iTXt, keyword: keyword, value: value })
 }
 
-module.exports.getitxt = getitxt;
-module.exports.setitxt = setitxt;
+module.exports.getv1 = getv1;
+module.exports.setv1 = setv1;
 },{"..":1}],3:[function(require,module,exports){
 (function (global){
 /* pako 0.2.8 nodeca/pako */
@@ -9303,6 +9303,63 @@ var png = require('../')
 var Through = require('stream').PassThrough
 var test = require('tape')
 
+var file = new Buffer('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/TQBcNTh/AAAAAXRSTlPM0jRW/QAAAApJREFUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII', 'base64')
+
+test('compatability-getset-functions', function (t) {
+  var start = new Through()
+  t.plan(3)
+  start
+    .pipe(png.setv1("cat", "cute" ))
+    .pipe(png.getv1('cat', function (value) {
+      t.equal(value, "cute", "should get the value cute");
+    }))
+    .pipe(png.getv1('pig', function (value) {
+      t.equal(value, null, 'should get null for no results')
+    }))
+    .pipe(png.setv1('cat', 'fluffy' ))
+    .pipe(png.getv1('cat', function (value) {
+      t.equal(value, 'fluffy', 'should only get one value')
+    }))
+    
+  start.write(file)
+})
+
+test('compatability-multiple-getset-functions', function (t) {
+  var start = new Through()
+  var expected = [{ keyword: 'the', value: 'cat' },
+                 { keyword: 'sat', value: 'cat' },
+                 { keyword: 'a', value: 'cat' } ]
+  
+  t.plan(10)
+  start
+    .pipe(png.getv1(function(keyword, value) {
+      t.equals(keyword, null, "no keyword should be found")
+      t.equals(value, null, "no value should be found")
+    }))
+    .pipe(png.setv1('the', 'cat'))
+    .pipe(png.getv1(function(keyword, value) {
+      t.equals(keyword, 'the', 'single keyword should be found')
+      t.equals(value, 'cat', "single value should be found")
+    }))
+    .pipe(png.setv1('sat', 'cat'))
+    .pipe(png.setv1('a', 'cat' ))
+    .pipe(png.getv1(function(keyword, value) {
+      var result = expected.shift()
+      t.equals(keyword, result.keyword, "multiple keys found in right order")
+      t.equals(value, result.value, "multiple values found in right order")
+    }))
+    
+  start.write(file)
+})
+
+}).call(this,require("buffer").Buffer)
+},{"../":1,"buffer":9,"fs":6,"stream":34,"tape":46}],59:[function(require,module,exports){
+(function (Buffer){
+var fs = require('fs')
+var png = require('../')
+var Through = require('stream').PassThrough
+var test = require('tape')
+
 var zTXtData = new Buffer("iVBORw0KGgoAAAANSUhEUgAAACAAAAAgBAAAAACT4cgpAAAABGdBTUEAAYagMeiWXwAAAA50RVh0VGl0bGUAUG5nU3VpdGVPVc9MAAAAMXRFWHRBdXRob3IAV2lsbGVtIEEuSi4gdmFuIFNjaGFpawood2lsbGVtQHNjaGFpay5jb20pjsxHHwAAAEF6VFh0Q29weXJpZ2h0AAB4nHPOL6gsykzPKFEIz8zJSc1VKEvMUwhOzkjMzNZRCM7MS08syC9KVTC0tDTVtTQDAIthD6RSWpQSAAAAu3pUWHREZXNjcmlwdGlvbgAAeJwtjrEOwjAMRPd+xU1Mpf/AhFgQv2BcQyLcOEoMVf8eV7BZvnt3dwLbUrOSZyuwBwhdfD/yQk/p4CbkMsMNLt3hSYYPtWzv0EytHX2r4QsiJNyuZzysLeQTLoX1PQdLTYa7Er8Oa8ou4w8cUUnFI3zEmj2BtCYCJypF9PcbvFHpNQIKb//gPuGkinv24yzVUw9Qbd17mK3NuTyHfW2s6VV4b0dt0qX49AUf8lYE8mJ6iAAAAEB6VFh0U29mdHdhcmUAAHiccy5KTSxJTVHIz1NIVPBLjQgpLkksyQTykvNz8osUSosz89IVlAryckvyC/LSlfQApuwRQp5RqK4AAAAdelRYdERpc2NsYWltZXIAAHiccytKTS1PLErVAwARVQNg1K617wAAAMhJREFUeJxd0cENwjAMBVAfKkAI8AgdoSOwCiNU4sgFMQEbMAJsUEZgA9igRj2VAp/ESVHiHCrnxXXtlGAWJXFrgQ1InvGaiKnxtIBtAvd/zQj8teDfnwnRjT0sFLhm7E9LCucHoNB0jsAoyO8F5JLXHqbtRgs76FC6gK++e3hw510DOYcvB3CPKiQo7CrpeezVg6DX/h7a6efoQPdDvCASCWPUcRaei07bVSOEKTExty6NgRVyEOTwZgMX5DCwgeRnaCilgXT9AB7ZwkX4/4lrAAAAAElFTkSuQmCC", "base64")
 
 var iTXtData = new Buffer("iVBORw0KGgoAAAANSUhEUgAAAAoAAAALCAYAAABGbhwYAAAABGdBTUEAALGPC/xhBQAAAARzQklUBQUFBU2lLfYAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAAscENBTGJvZ3VzIHVuaXRzAAAAAAAAAP//AAJmb28vYmFyADEuMGUwADY1LjUzNWUzV0B7HAAAAAd0SU1FB8wGBxE6CI7/JnoAAAAGYktHRADgAOAAgJXNLyAAAAAJdEVYdFRpdGxlAFBOR9wBeTUAAAAnaVRYdEF1dGhvcgAAAGZyAEF1dGV1cgBMYSBwbHVtZSBkZSBtYSB0YW50ZU/bcuEAAADKelRYdERlc2NyaXB0aW9uAAB42k2PTWrDQAyF9z7FW7aQmEIhJwjZtQ1ucNaTGTkW2NIwkhN8+4y76vbxvb+OJFGhhNuKMxVjc5JI0AE9G6vgzed3dGHFpYRIpek3quqf7ccOi7Hc4SPhwjMZvumJTucgGFQcQRKOX6erajq0zS9vyeeffr/FJa28qCNxoTj5Clty1uJgcSpTLUvQxfPiu8ZHNgw8EcZguBEJosqDilfItRb9d/Ec7oQHB4Qmq/k+F41kf1vrv9y+AG4IVyNpKlL5AAAAb2lUWHRXYXJuaW5nAAEAZGUAV0FSTklORwB4nAXBwQ2DMAwF0Hun+AOUDIEKiDMTuPIHWSKOFCdB6vR9bwlYYLB+S6O/0TPUGMRHGg3mUAls+zrNdutZapb26vnXH3Hl7Qk4jAhzxcUh1RueUpWe/rKYICRVGEZ3AAAAG0lEQVQoU2P8DwQMRAAmKE0QjCrEC6itkIEBABCLBBKfcg7nAAAAAElFTkSuQmCC", "base64")
@@ -9373,7 +9430,7 @@ test('compression-iTXt-write', function(t) {
 })
 
 }).call(this,require("buffer").Buffer)
-},{"../":1,"buffer":9,"fs":6,"stream":34,"tape":46}],59:[function(require,module,exports){
+},{"../":1,"buffer":9,"fs":6,"stream":34,"tape":46}],60:[function(require,module,exports){
 (function (Buffer){
 var fs = require('fs')
 var png = require('../')
@@ -9432,7 +9489,7 @@ test('get-error-functions', function (t) {
 })
 
 }).call(this,require("buffer").Buffer)
-},{"../":1,"buffer":9,"fs":6,"stream":34,"tape":46}],60:[function(require,module,exports){
+},{"../":1,"buffer":9,"fs":6,"stream":34,"tape":46}],61:[function(require,module,exports){
 (function (Buffer){
 var fs = require('fs')
 var png = require('../')
@@ -9536,7 +9593,7 @@ test('get-filter-complex-functions', function (t) {
 
 
 }).call(this,require("buffer").Buffer)
-},{"../":1,"buffer":9,"fs":6,"stream":34,"tape":46}],61:[function(require,module,exports){
+},{"../":1,"buffer":9,"fs":6,"stream":34,"tape":46}],62:[function(require,module,exports){
 (function (Buffer){
 var fs = require('fs')
 var png = require('../')
@@ -9572,7 +9629,7 @@ test('multiple-get', function(t) {
 
 
 }).call(this,require("buffer").Buffer)
-},{"../":1,"buffer":9,"fs":6,"stream":34,"tape":46}],62:[function(require,module,exports){
+},{"../":1,"buffer":9,"fs":6,"stream":34,"tape":46}],63:[function(require,module,exports){
 (function (Buffer){
 var fs = require('fs')
 var png = require('../')
@@ -9623,7 +9680,7 @@ test('regex-get', function(t) {
 })
 
 }).call(this,require("buffer").Buffer)
-},{"../":1,"buffer":9,"fs":6,"stream":34,"tape":46}],63:[function(require,module,exports){
+},{"../":1,"buffer":9,"fs":6,"stream":34,"tape":46}],64:[function(require,module,exports){
 (function (Buffer){
 var fs = require('fs')
 var png = require('../')
@@ -9666,63 +9723,6 @@ test('set-replace-functions', function (t) {
       t.deepEqual(data, { keyword: "cat", value: "tabby", type: "iTXt",
                         compressed: false, compression_type: 0, language: "",
                         translated: ""}, "should only get one value for cat");
-    }))
-    
-  start.write(file)
-})
-
-}).call(this,require("buffer").Buffer)
-},{"../":1,"buffer":9,"fs":6,"stream":34,"tape":46}],64:[function(require,module,exports){
-(function (Buffer){
-var fs = require('fs')
-var png = require('../')
-var Through = require('stream').PassThrough
-var test = require('tape')
-
-var file = new Buffer('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/TQBcNTh/AAAAAXRSTlPM0jRW/QAAAApJREFUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII', 'base64')
-
-test('wrapper-getset-functions', function (t) {
-  var start = new Through()
-  t.plan(3)
-  start
-    .pipe(png.setitxt("cat", "cute" ))
-    .pipe(png.getitxt('cat', function (value) {
-      t.equal(value, "cute", "should get the value cute");
-    }))
-    .pipe(png.getitxt('pig', function (value) {
-      t.equal(value, null, 'should get null for no results')
-    }))
-    .pipe(png.setitxt('cat', 'fluffy' ))
-    .pipe(png.getitxt('cat', function (value) {
-      t.equal(value, 'fluffy', 'should only get one value')
-    }))
-    
-  start.write(file)
-})
-
-test('wrapper-multiple-getset-functions', function (t) {
-  var start = new Through()
-  var expected = [{ keyword: 'the', value: 'cat' },
-                 { keyword: 'sat', value: 'cat' },
-                 { keyword: 'a', value: 'cat' } ]
-  
-  t.plan(10)
-  start
-    .pipe(png.getitxt(function(keyword, value) {
-      t.equals(keyword, null, "no keyword should be found")
-      t.equals(value, null, "no value should be found")
-    }))
-    .pipe(png.setitxt('the', 'cat'))
-    .pipe(png.getitxt(function(keyword, value) {
-      t.equals(keyword, 'the', 'single keyword should be found')
-      t.equals(value, 'cat', "single value should be found")
-    }))
-    .pipe(png.setitxt('sat', 'cat'))
-    .pipe(png.setitxt('a', 'cat' ))
-    .pipe(png.getitxt(function(keyword, value) {
-      var result = expected.shift()
-      t.equals(keyword, result.keyword, "multiple keys found in right order")
-      t.equals(value, result.value, "multiple values found in right order")
     }))
     
   start.write(file)

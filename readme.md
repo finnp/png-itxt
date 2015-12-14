@@ -27,8 +27,8 @@ var pngitxt = require('png-itxt')
 ## Backward Compatability
 The new functions do not take the same parameters as the version 1.3.0 or earlier. If you upgrade to this version of the library then you will need to change your code. To make this process easier two wrapper methods have been provided called `getitxt` and `setitxt`. These methods expose the same interface as version 1.3.0 so to get up and running with the new library simple search and replace the following (assuming you have required the library as above).
 
-* **Search for**: `pngitxt.get`, **Replace with**: `pngitxt.getitxt`
-* **Search for**: `pngitxt.set`, **Replace with**: `pngitxt.setitxt`
+* **Search for**: `pngitxt.get`, **Replace with**: `pngitxt.getv1`
+* **Search for**: `pngitxt.set`, **Replace with**: `pngitxt.setv1`
 
 ## Constants
 The module exports constants for the types of the textual chunks. These can be accessed as follows.
@@ -48,7 +48,7 @@ Chunk data should be provided and will be returned as an object as shown below. 
   keyword: 'keyword',
   value: 'value',
   language: '',
-  translated '',
+  translated: '',
   compressed: false,
   compression_type: 0
 }
@@ -117,7 +117,9 @@ The callback to all the get methods is given two parameters. The first is used t
 
 ```js
 function pngtxtCallback (err, data) {
+  if (!err && data) {
     console.log(data.keyword, ":", data.value)
+  }
 }
 ```
 
@@ -127,8 +129,8 @@ To find the text associated with a specific keyword you must call get and provid
 ```js
 fs.createReadStream('input.png')
   .pipe(pngitxt.get('pizza', function (err, data) {
-    if (!err) {
-      console.log(data.keyword, ":", data.value) // pizza : delicious
+    if (!err && data) {
+      console.log(data.keyword, ":", data.value)
     }
   }))
 ```
@@ -139,8 +141,8 @@ Instead of providing a keyword you can provide a regular expression and all chun
 ```js
 fs.createReadStream('input.png')
   .pipe(pngitxt.get(/Pi[z]{2}a/i, function (err, data) {
-    if (!err) {
-      console.log(data.keyword, ":", data.value) // pizza : delicious
+    if (!err && data) {
+      console.log(data.keyword, ":", data.value)
     }
   }))
 ```
@@ -151,8 +153,8 @@ To find all chunks simply provide a callback that takes two parameters. If no te
 ```js
 fs.createReadStream('input.png')
   .pipe(pngitxt.get(function (err, data) {
-    if (!err) {
-      console.log(data.keyword, ":", data.value) // pizza : delicious
+    if (!err && data) {
+      console.log(data.keyword, ":", data.value)
     }
   }))
 ```
@@ -164,8 +166,8 @@ To filter the chunks by type you provide an array of acceptable chunk types. For
 // This will find all the tEXt chunks with the keyword pizza
 fs.createReadStream('input.png')
   .pipe(pngitxt.get('pizza', [ pngitxt.tEXt ], function (err, data) {
-    if (!err) {
-      console.log(data.keyword, ":", data.value) // pizza : delicious
+  if (!err && data) {
+      console.log(data.keyword, ":", data.value)
     }
   }))
 ```
@@ -177,8 +179,8 @@ Please note that even if you are only looking for one type of chunk the value mu
 fs.createReadStream('input.png')
   .pipe(pngitxt.get('pizza', [ pngitxt.tEXt, pngitxt.zTXt, pngitxt.iTXt ],
     function (err, data) {
-      if (!err) {
-        console.log(data.keyword, ":", data.value) // pizza : delicious
+    if (!err && data) {
+      console.log(data.keyword, ":", data.value)
     }
   }))
 ```
@@ -189,8 +191,8 @@ If no keyword is specified then the filter array can be provided as the first pa
 // This will find all the iTXt and zTXt chunks.
 fs.createReadStream('input.png')
   .pipe(pngitxt.get([pngitxt.iTXt, pngitxt.zTXt], function (err, data) {
-    if (!err) {
-      console.log(data.keyword, ":", data.value) // pizza : delicious
+    if (!err && data) {
+      console.log(data.keyword, ":", data.value)
     }
   }))
 ```

@@ -292,8 +292,8 @@ function getFieldEnd(data) {
 
 // import compatability functions
 var old = require('./lib/compatability.js')
-exports.getitxt = old.getitxt
-exports.setitxt = old.setitxt
+exports.getv1 = old.getv1
+exports.setv1 = old.setv1
 
 exports.set = set
 exports.get = get
