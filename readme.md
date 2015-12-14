@@ -160,12 +160,36 @@ fs.createReadStream('input.png')
 ```
 
 ### Filtering by Chunk Type
-To filter the chunks by type you provide an array of acceptable chunk types. For example the following code shows how to filter the data so that you only get tEXt chunks with the keyword pizza.
+To filter the chunks by type you can provide an array of acceptable chunk types. However for you convience three wrapper functions are provided if you are you are just looking for chunks of a particular type. These functions are shown below and, apart from the filters array, they have the exact same parameters as the normal get function.
+
+```js
+function callback (err, data) {
+  // do something with result.
+}
+
+
+fs.createReadStream('input.png')
+  // Read all the iTXt blocks with keyword cat
+  .pipe(pngitxt.getitxt('cat', callback)) 
+  // Read all the iTXt blocks regardless of keyword
+  .pipe(pngitxt.getitxt(callback))
+  // Read all the zTXt blocks with keyword cat
+  .pipe(pngitxt.getztxt('cat', callback)) 
+  // Read all the zTXt blocks regardless of keyword
+  .pipe(pngitxt.getztxt(callback))
+  // Read all the tEXt blocks with keyword cat
+  .pipe(pngitxt.gettext('cat', callback)) 
+  // Read all the tEXt blocks regardless of keyword
+  .pipe(pngitxt.gettext(callback))
+
+```
+
+To specify a specific combination of chunk types use an array as shown in the following example where the data is filtered so that you only get tEXt and iTXt chunks with the keyword pizza.
 
 ```js
 // This will find all the tEXt chunks with the keyword pizza
 fs.createReadStream('input.png')
-  .pipe(pngitxt.get('pizza', [ pngitxt.tEXt ], function (err, data) {
+  .pipe(pngitxt.get('pizza', [ pngitxt.tEXt, pngitxt.iTXt ], function (err, data) {
   if (!err && data) {
       console.log(data.keyword, ":", data.value)
     }
