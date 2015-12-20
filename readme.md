@@ -250,6 +250,28 @@ pngitxt.get(input, keyword, filters, function (err, data) {
           })
 ```
 
+As before a number of helper functions are also provided for those that want to search for only one type of text chunk. An example of how to call these methods in the browser are shown below.
+
+```js
+// Get the image data from somewhere
+var input = undefined
+
+// Create callback to process result.
+function callback (err, data) {
+  // do something with result.
+}
+
+// Read all the iTXt blocks with keyword cat
+pngitxt.getitxt(input, 'cat', callback)
+
+// Read all the zTXt blocks with keyword cat
+pngitxt.getztxt(input, 'cat', callback)
+
+// Read all the tEXt blocks with keyword cat
+pngitxt.gettext(input, 'cat', callback)
+
+```
+
 The set function has a similar input parameter and a data parameter as before. The last parameter is a callback that gives a binary string containing the altered image data. If, for example, you wanted to add an iTXt block to a picture and then display the picture on a page you can convert the data to a base64 encoding to display it on the page as follows.
 
 ```js
