@@ -4,10 +4,10 @@
   "description": "Adding and reading png iTXt data with streams",
   "main": "index.js",
   "scripts": {
-    "test": "tape test/*.test.js",
+    "test": " tape test/*.test.js",
+    "lint": "standard",
     "bundletests": "browserify test/*.test.js -o test/browser-test/test_bundle.js",
-    "browsertests": "phantomjs test/browser-test/test_webpage.js",
-    "dist": "browserify --s pngitxt -o dist/pngitxt-browser.js browser.js; uglifyjs -m -o dist/pngitxt-browser.min.js dist/pngitxt-browser.js"
+    "browsertests": "phantomjs test/browser-test/test_webpage.js"
   },
   "author": "Finn Pauls",
   "license": "MIT",
@@ -23,8 +23,8 @@
   },
   "devDependencies": {
     "browserify": "^12.0.1",
-    "tape": "^3.0.0",
-    "uglify-js": "^2.6.1"
+    "standard": "^5.4.1",
+    "tape": "^3.0.0"
   },
   "testling": {
     "files": "test/*.test.js",

@@ -6,17 +6,16 @@ module.exports.set = function (input, data, callback) {
   var resultStream = dataStream.pipe(pngitxt.set(data))
 
   var result = []
-  resultStream.on('data', function(datain) { result.push(datain); })
-  resultStream.on('end', function() {
+  resultStream.on('data', function (datain) { result.push(datain) })
+  resultStream.on('end', function () {
     result = Buffer.concat(result)
     callback(result.toString('binary'))
   })
-  dataStream.end(new Buffer (input, 'binary'))
+  dataStream.end(new Buffer(input, 'binary'))
 }
 
-
 module.exports.get = function (input, keyword, filter, callback) {
-  pngitxt.get(keyword, filter, callback).end(new Buffer (input, 'binary'))
+  pngitxt.get(keyword, filter, callback).end(new Buffer(input, 'binary'))
 }
 
 module.exports.getitxt = function (input, keyword, callback) {
