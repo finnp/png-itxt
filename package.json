@@ -34,6 +34,11 @@
       "safari/latest"
     ]
   },
+  "standard": {
+    "ignore": [
+      "/test/browser-test/test_bundle.js"
+    ]
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/finnp/png-itxt.git"
