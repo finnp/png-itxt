@@ -6,8 +6,7 @@
   "scripts": {
     "test": " tape test/*.test.js",
     "lint": "standard",
-    "bundletests": "browserify test/*.test.js -o test/browser-test/test_bundle.js",
-    "browsertests": "phantomjs test/browser-test/test_webpage.js"
+    "bundletests": "browserify test/*.test.js -o test/browser-test/test_bundle.js"
   },
   "author": "Finn Pauls",
   "license": "MIT",

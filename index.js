@@ -169,11 +169,70 @@ function set (key, value, opts) {
     opts.replaceAll = false
   }
 
+  if (opts.append === undefined) {
+    opts.append = false
+  }
+
+  if (opts.replaceLang === undefined) {
+    opts.replaceLang = false
+  }
+
   var createChunk = chunkEncoder[data.type]
   if (createChunk === undefined) {
     throw new Error('invalid chunk type specified')
   }
 
+  // Assume doing normal replace all of same type.
+  var blockCheck = function (chunk) {
+    if (chunk.type === data.type) {
+      var pos = getFieldEnd(chunk.data)
+      return (chunk.data.slice(0, pos).toString() === data.keyword)
+    }
+    return false
+  }
+
+  // Append has preference over replaceAll
+  if (opts.append) {
+    // Assumption is made here that a null value with
+    // append basically does processing for nothing.
+    blockCheck = function (chunk) { return false }
+  } else if (opts.replaceAll) {
+    blockCheck = function (chunk) {
+      return (chunk.type === iTXt || chunk.type === zTXt || chunk.type === tEXt)
+    }
+  } else if (opts.replaceOne) {
+    var found = false
+    blockCheck = function (chunk) {
+      if (!found) {
+        if (chunk.type === data.type) {
+          var pos = getFieldEnd(chunk.data)
+          found = (chunk.data.slice(0, pos).toString() === data.keyword)
+          return found
+        }
+      }
+      return false
+    }
+  } else if (opts.replaceLang) {
+    // Not sure if this should be an exception or just append?
+    if (data.type !== iTXt) {
+      throw new Error('can\'t do language replace on ' + data.type)
+    }
+
+    blockCheck = function (chunk) {
+      if (chunk.type === data.type) {
+        var pos = getFieldEnd(chunk.data)
+        if (chunk.data.slice(0, pos).toString() === data.keyword) {
+          // Have to do some decoding here to check language.
+          var unprocessed = chunk.data.slice(pos + 3)
+          var language = unprocessed.slice(0, getFieldEnd(unprocessed)).toString('utf8')
+          return (language === data.language)
+        }
+      }
+      return false
+    }
+  }
+
+  // Code for replaceAll
   decoder.pipe(through.obj(function (chunk, enc, cb) {
     // Add just before end if not found.
     if (chunk.type === 'IEND' && !this.found) {
@@ -184,23 +243,8 @@ function set (key, value, opts) {
       return cb()
     }
 
-    if (chunk.type === data.type || (opts.replaceAll &&
-      (chunk.type === iTXt || chunk.type === zTXt || chunk.type === tEXt))) {
-      var pos = getFieldEnd(chunk.data)
-      if (chunk.data.slice(0, pos).toString() === data.keyword) {
-        if (!this.found) {
-          if (data.value !== null) {
-            this.push({ 'type': data.type, 'data': createChunk(data) })
-          }
-          this.found = true
-        }
-      // If it is the same keyword and it has been replaced ignore chunk.
-      } else {
-        // Push all chunks where keyword not matched.
-        this.push(chunk)
-      }
-    } else {
-      // push all non textual chunks
+    if (!blockCheck(chunk)) {
+      // push all non matching chunks
       this.push(chunk)
     }
 
