@@ -77,3 +77,29 @@ test('base-zTXt-simplegetset-functions', function (t) {
 
   start.write(file)
 })
+
+test('base-set-functions-old-interface', function (t) {
+  var start = new Through()
+  t.plan(6)
+  start
+    .pipe(png.set('cat', 'cute'))
+    .pipe(png.get('cat', function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: 'cat', value: 'cute', type: 'iTXt',
+        compressed: false, compression_type: 0, language: '',
+      translated: ''}, 'should get expected result for set/get')
+    }))
+    .pipe(png.get('pig', function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.equal(data, null, 'should get null for no results')
+    }))
+    .pipe(png.set('cat', 'fluffy'))
+    .pipe(png.get('cat', function (err, data) {
+      t.equal(err, null, 'should have no error')
+      t.deepEqual(data, { keyword: 'cat', value: 'fluffy', type: 'iTXt',
+        compressed: false, compression_type: 0, language: '',
+      translated: ''}, 'should only get one value for cat')
+    }))
+
+  start.write(file)
+})

@@ -139,13 +139,34 @@ const chunkEncoder = {
   }
 }
 
-function set (data, replaceAll) {
+function set (key, value, opts) {
   var encoder = encode()
   var decoder = decode()
+
+  var data = { }
+  if (typeof (key) === 'object') {
+    data = key
+    opts = value
+  } else if (typeof (key) === 'string') {
+    if (value !== null && typeof (value) !== 'string') {
+      throw new Error('Invalid paramters for set')
+    }
+
+    data.keyword = key
+    data.value = value
+  }
 
   // Assume iTXt chunks to be created
   if (data.type === undefined) {
     data.type = iTXt
+  }
+
+  if (opts === undefined) {
+    opts = {}
+  }
+
+  if (opts.replaceAll === undefined) {
+    opts.replaceAll = false
   }
 
   var createChunk = chunkEncoder[data.type]
@@ -163,7 +184,7 @@ function set (data, replaceAll) {
       return cb()
     }
 
-    if (chunk.type === data.type || (replaceAll !== undefined && replaceAll &&
+    if (chunk.type === data.type || (opts.replaceAll &&
       (chunk.type === iTXt || chunk.type === zTXt || chunk.type === tEXt))) {
       var pos = getFieldEnd(chunk.data)
       if (chunk.data.slice(0, pos).toString() === data.keyword) {
