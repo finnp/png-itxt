@@ -25,7 +25,8 @@ test('set-replaceLang-functions', function (t) {
       t.deepEqual(data, testdata.shift(), 'should only find one iTXt chunk')
     }))
     .pipe(png.set({ type: 'iTXt', keyword: 'cat', value: 'flaumig', language: 'DE' }, { replaceLang: true }))
-    .pipe(png.set({ type: 'iTXt', keyword: 'cat', value: 'fluffy', language: 'EN' }, { replaceLang: true }))
+    .pipe(png.set({ type: 'iTXt', keyword: 'cat', value: 'fluffy', language: 'EN' },
+                  png.REPLACELANG))
     .pipe(png.get('cat', function (err, data) {
       t.equal(err, null, 'should have no error')
       t.deepEqual(data, testdata.shift(), 'should find both cat values.')

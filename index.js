@@ -7,6 +7,12 @@ var pako = require('pako')
 const zTXt = exports.zTXt = 'zTXt'
 const iTXt = exports.iTXt = 'iTXt'
 const tEXt = exports.tEXt = 'tEXt'
+
+const REPLACETYPE = exports.REPLACETYPE = 0
+const REPLACEONE = exports.REPLACEONE = 1
+const REPLACELANG = exports.REPLACELANG = 2
+const REPLACEALL = exports.REPLACEALL = 3
+const REPLACENONE = exports.REPLACENONE = 4 // append?
 const matchOperatorsRe = /[|\\{}()[\]^$+*?.]/g
 
 const chunkDecoder = {
@@ -139,14 +145,14 @@ const chunkEncoder = {
   }
 }
 
-function set (key, value, opts) {
+function set (key, value, replaceOpt) {
   var encoder = encode()
   var decoder = decode()
 
   var data = { }
   if (typeof (key) === 'object') {
     data = key
-    opts = value
+    replaceOpt = value
   } else if (typeof (key) === 'string') {
     if (value !== null && typeof (value) !== 'string') {
       throw new Error('Invalid paramters for set')
@@ -161,20 +167,8 @@ function set (key, value, opts) {
     data.type = iTXt
   }
 
-  if (opts === undefined) {
-    opts = {}
-  }
-
-  if (opts.replaceAll === undefined) {
-    opts.replaceAll = false
-  }
-
-  if (opts.append === undefined) {
-    opts.append = false
-  }
-
-  if (opts.replaceLang === undefined) {
-    opts.replaceLang = false
+  if (replaceOpt === undefined) {
+    replaceOpt = REPLACETYPE
   }
 
   var createChunk = chunkEncoder[data.type]
@@ -182,54 +176,65 @@ function set (key, value, opts) {
     throw new Error('invalid chunk type specified')
   }
 
-  // Assume doing normal replace all of same type.
-  var blockCheck = function (chunk) {
-    if (chunk.type === data.type) {
-      var pos = getFieldEnd(chunk.data)
-      return (chunk.data.slice(0, pos).toString() === data.keyword)
-    }
-    return false
-  }
-
-  // Append has preference over replaceAll
-  if (opts.append) {
-    // Assumption is made here that a null value with
-    // append basically does processing for nothing.
-    blockCheck = function (chunk) { return false }
-  } else if (opts.replaceAll) {
-    blockCheck = function (chunk) {
-      return (chunk.type === iTXt || chunk.type === zTXt || chunk.type === tEXt)
-    }
-  } else if (opts.replaceOne) {
-    var found = false
-    blockCheck = function (chunk) {
-      if (!found) {
+  // Basically the function for REPLACENONE - need
+  // to initialise with something and its small!
+  // Assumption is made here that a null value with
+  // append basically does processing for nothing.
+  var blockCheck = function (chunk) { return false }
+  switch (replaceOpt) {
+    case REPLACETYPE:
+      blockCheck = function (chunk) {
         if (chunk.type === data.type) {
           var pos = getFieldEnd(chunk.data)
-          found = (chunk.data.slice(0, pos).toString() === data.keyword)
-          return found
+          return (chunk.data.slice(0, pos).toString() === data.keyword)
         }
+        return false
       }
-      return false
-    }
-  } else if (opts.replaceLang) {
-    // Not sure if this should be an exception or just append?
-    if (data.type !== iTXt) {
-      throw new Error('can\'t do language replace on ' + data.type)
-    }
+      break
 
-    blockCheck = function (chunk) {
-      if (chunk.type === data.type) {
-        var pos = getFieldEnd(chunk.data)
-        if (chunk.data.slice(0, pos).toString() === data.keyword) {
-          // Have to do some decoding here to check language.
-          var unprocessed = chunk.data.slice(pos + 3)
-          var language = unprocessed.slice(0, getFieldEnd(unprocessed)).toString('utf8')
-          return (language === data.language)
-        }
+    case REPLACEALL:
+      blockCheck = function (chunk) {
+        return (chunk.type === iTXt || chunk.type === zTXt || chunk.type === tEXt)
       }
-      return false
-    }
+      break
+
+    case REPLACELANG:
+      // Not sure if this should be an exception or just append?
+      if (data.type !== iTXt) {
+        throw new Error('can\'t do language replace on ' + data.type)
+      }
+
+      blockCheck = function (chunk) {
+        if (chunk.type === data.type) {
+          var pos = getFieldEnd(chunk.data)
+          if (chunk.data.slice(0, pos).toString() === data.keyword) {
+            // Have to do some decoding here to check language.
+            var unprocessed = chunk.data.slice(pos + 3)
+            var language = unprocessed.slice(0,
+                getFieldEnd(unprocessed)).toString('utf8')
+            return (language === data.language)
+          }
+        }
+        return false
+      }
+      break
+
+    case REPLACEONE:
+      var found = false
+      blockCheck = function (chunk) {
+        if (!found) {
+          if (chunk.type === data.type) {
+            var pos = getFieldEnd(chunk.data)
+            found = (chunk.data.slice(0, pos).toString() === data.keyword)
+            return found
+          }
+        }
+        return false
+      }
+      break
+
+    case REPLACENONE:
+      break // Already dealt with
   }
 
   // Code for replaceAll

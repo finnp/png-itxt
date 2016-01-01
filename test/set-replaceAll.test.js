@@ -32,7 +32,8 @@ test('set-replace-functions', function (t) {
       t.equal(err, null, 'should have no error')
       t.equals(data.keyword, 'cat', 'should find all three')
     }))
-    .pipe(png.set({ type: 'iTXt', keyword: 'cat', value: 'tabby' }, { replaceAll: true }))
+    .pipe(png.set({ type: 'iTXt', keyword: 'cat', value: 'tabby' },
+                 png.REPLACEALL))
     .pipe(png.get('cat', function (err, data) {
       t.equal(err, null, 'should have no error')
       t.deepEqual(data, { keyword: 'cat', value: 'tabby', type: 'iTXt',
@@ -71,7 +72,7 @@ test('set-replace-oldinterface-functions', function (t) {
       t.equal(err, null, 'should have no error')
       t.equals(data.keyword, 'cat', 'should find all three')
     }))
-    .pipe(png.set('cat', 'tabby', { replaceAll: true }))
+    .pipe(png.set('cat', 'tabby', png.REPLACEALL))
     .pipe(png.get('cat', function (err, data) {
       t.equal(err, null, 'should have no error')
       t.deepEqual(data, { keyword: 'cat', value: 'tabby', type: 'iTXt',

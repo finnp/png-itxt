@@ -24,8 +24,8 @@ test('set-replaceOne-functions', function (t) {
       t.equal(err, null, 'should have no error')
       t.deepEqual(data, testdata.shift(), 'should only find one iTXt chunk')
     }))
-    .pipe(png.set({ type: 'iTXt', keyword: 'cat', value: 'tabby' }, { append: true }))
-    .pipe(png.set({ type: 'iTXt', keyword: 'cat', value: 'black' }, { replaceOne: true }))
+    .pipe(png.set({ type: 'iTXt', keyword: 'cat', value: 'tabby' }, png.REPLACENONE))
+    .pipe(png.set({ type: 'iTXt', keyword: 'cat', value: 'black' }, png.REPLACEONE))
     .pipe(png.get('cat', function (err, data) {
       t.equal(err, null, 'should have no error')
       t.deepEqual(data, testdata.shift(), 'should find both cat values.')
@@ -54,8 +54,8 @@ test('set-replaceOne-oldinterface-functions', function (t) {
       t.equal(err, null, 'should have no error')
       t.deepEqual(data, testdata.shift(), 'should only find one iTXt chunk')
     }))
-    .pipe(png.set('cat', 'tabby', { append: true }))
-    .pipe(png.set('cat', 'black', { replaceOne: true }))
+    .pipe(png.set('cat', 'tabby', png.REPLACENONE))
+    .pipe(png.set('cat', 'black', png.REPLACEONE))
     .pipe(png.get('cat', function (err, data) {
       t.equal(err, null, 'should have no error')
       t.deepEqual(data, testdata.shift(), 'should find both cat values.')
