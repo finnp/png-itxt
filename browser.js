@@ -1,7 +1,18 @@
 var Through = require('stream').PassThrough
 var pngitxt = require('.')
 
-module.exports.set = function (input, data, callback) {
+module.exports.set = function (input, key, value, callback) {
+  // Cope with the fact that key/value
+  // can be passed in as a single object.
+  var data = { }
+  if (callback === undefined) {
+    callback = value
+    data = key
+  } else {
+    data.keyword = key
+    data.value = value
+  }
+
   var dataStream = new Through()
   var resultStream = dataStream.pipe(pngitxt.set(data))
 
