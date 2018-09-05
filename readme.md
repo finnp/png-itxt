@@ -228,60 +228,6 @@ fs.createReadStream('input.png')
   .pipe(pngitxt.get("pizza", 'blah'))
 ```
 
-## Browser Library
-As a test a browser libarary, produced using browserify in standalone mode, is available in the dist folder. Both a normal and minified version is provided. To include it on your webpage simple copy the bundled js file to the appropriate location and add the following. All exports from the library are then available on the pngitxt object.
-
-```html
-<srcipt src='pngitxt-browser.min.js'></srcipt>
-```
-
-The library exposes the same constats as for node and can be accessed in the same way. The library also exposes the same get and set functions but there are some differences in how they are called. The signature for the get function is shown below. All the parameters are the same apart from the first one which should provide the binary data of the image to check. Such a string can be obtained in various way including using the FileReader.readAsBinaryString method.
-
-```js
-// Get input from somewhere
-pngitxt.get(input, keyword, filters, function (err, data) {
-            if (!err && data) {
-              console.log(JSON.stringify(data))
-            }
-          })
-```
-
-As before a number of helper functions are also provided for those that want to search for only one type of text chunk. An example of how to call these methods in the browser are shown below.
-
-```js
-// Get the image data from somewhere
-var input = undefined
-
-// Create callback to process result.
-function callback (err, data) {
-  // do something with result.
-}
-
-// Read all the iTXt blocks with keyword cat
-pngitxt.getitxt(input, 'cat', callback)
-
-// Read all the zTXt blocks with keyword cat
-pngitxt.getztxt(input, 'cat', callback)
-
-// Read all the tEXt blocks with keyword cat
-pngitxt.gettext(input, 'cat', callback)
-
-```
-
-The set function has a similar input parameter and a data parameter as before. The last parameter is a callback that gives a binary string containing the altered image data. If, for example, you wanted to add an iTXt block to a picture and then display the picture on a page you can convert the data to a base64 encoding to display it on the page as follows.
-
-```js
-// Get input from somewhere
-pngitxt.set(input, { keyword: "test", value: "value" },
-        function (result) {
-          var img = document.createElement('img');
-          img.src = "data:image/png;base64," + btoa(result);
-          document.body.appendChild(img);
-        })
-```
-
-A simple, rough and ready proof of concept of this functionality is available as a webpage at dist/example.html. This page will allow you to drag and drop images to either inspect their data or add additional data.
-
 ## Command Line Tool
 The command line tool, called `png-itxt` is provided in the bin folder and will be automatically linked from the node_modules/.bin folder if installed with npm. The two commands it supports are as follows.
 
